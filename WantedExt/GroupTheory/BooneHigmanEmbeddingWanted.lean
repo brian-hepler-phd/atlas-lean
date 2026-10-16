@@ -34,6 +34,7 @@ and placed the declarations in the `MathlibExt.GroupTheory.BooneHigmanEmbeddingW
 module
 
 public import Batteries.Util.ProofWanted
+public import Mathlib.GroupTheory.FinitelyPresentedGroup
 public import Mathlib.GroupTheory.FreeGroup.Basic
 public import Mathlib.GroupTheory.PresentedGroup
 public import Mathlib.GroupTheory.FinitelyPresentedGroup
