@@ -3,7 +3,7 @@
 This fork's `main` mirrors [facebookresearch/atlas-lean]
 (https://github.com/facebookresearch/atlas-lean) and is refreshed hourly.
 
-- Last sync: 2026-10-16 05:46 UTC
+- Last sync: 2026-10-16 11:14 UTC
 - Upstream main: `92f07d6e`
 - Commits behind at sync time: 0
 
