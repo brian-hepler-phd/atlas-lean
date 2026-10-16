@@ -1,0 +1,83 @@
+name: Sync fork with upstream
+
+# Keeps this fork's `main` tracking facebookresearch/atlas-lean.
+# `main` stays the default branch so visitors land on the mirror; the only
+# intended difference from upstream is this workflow file itself.
+
+on:
+  schedule:
+    - cron: "7 * * * *"      # hourly at :07 (UTC) - off-the-hour avoids peak queueing
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: sync-fork
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/facebookresearch/atlas-lean.git
+          git fetch upstream main --tags
+
+      - name: Measure drift before sync
+        id: drift
+        run: |
+          BEHIND=$(git rev-list --count HEAD..upstream/main)
+          UP_SHA=$(git rev-parse --short upstream/main)
+          echo "behind=$BEHIND"  >> "$GITHUB_OUTPUT"
+          echo "up_sha=$UP_SHA"  >> "$GITHUB_OUTPUT"
+          echo "Fork was $BEHIND commit(s) behind upstream ($UP_SHA)."
+
+      - name: Merge upstream/main into main
+        run: git merge --no-edit upstream/main
+
+      - name: Write sync status
+        run: |
+          {
+            echo "# Mirror status"
+            echo
+            echo "This fork's \`main\` mirrors [facebookresearch/atlas-lean]"
+            echo "(https://github.com/facebookresearch/atlas-lean) and is refreshed hourly."
+            echo
+            echo "- Last sync: $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo "- Upstream main: \`${{ steps.drift.outputs.up_sha }}\`"
+            echo "- Commits behind at sync time: ${{ steps.drift.outputs.behind }}"
+            echo
+            echo "If \"Last sync\" is more than a couple of hours old, treat this"
+            echo "mirror as STALE and read upstream directly."
+          } > SYNC_STATUS.md
+          git add SYNC_STATUS.md
+          git diff --cached --quiet || git commit -m "Update mirror sync status"
+
+      - name: Push
+        run: git push origin main
+
+      - name: Open an issue if the sync failed
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create --repo "${{ github.repository }}" \
+            --title "Fork sync failed $(date -u '+%Y-%m-%d %H:%M UTC')" \
+            --body "The hourly upstream sync failed. This mirror is now STALE - read
+          facebookresearch/atlas-lean directly until it is fixed.
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
