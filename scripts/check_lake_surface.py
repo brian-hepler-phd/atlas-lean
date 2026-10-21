@@ -129,15 +129,15 @@ def check_manifest() -> None:
             fail(f"manifest package {name} is not pinned to a commit")
 
     mathlib = packages[names.index("mathlib")]
-    if mathlib.get("inputRev") != "v4.34.1" or mathlib.get("rev") != (
-        "d13f23b723b8a846827a245b89c10fc7d3f11612"
+    if mathlib.get("inputRev") != "v4.35.0" or mathlib.get("rev") != (
+        "56a005855ea17e0b0958f73ec801ae140b0a1679"
     ):
         fail("manifest Mathlib revision does not match lakefile.toml")
     if mathlib.get("inherited") is not False:
         fail("Mathlib must be the root package's direct dependency")
     cslib = packages[names.index("cslib")]
-    if cslib.get("inputRev") != "v4.34.1" or cslib.get("rev") != (
-        "7c8f6c0f67015df29b152fdcffaf7850db2e9185"
+    if cslib.get("inputRev") != "v4.35.0" or cslib.get("rev") != (
+        "5b56df99362532c46e1175381fbbdd755bd56030"
     ):
         fail("manifest CSLib revision does not match lakefile.toml")
     if cslib.get("inherited") is not False:
@@ -183,12 +183,12 @@ def main() -> None:
         {
             "name": "mathlib",
             "scope": "leanprover-community",
-            "rev": "v4.34.1",
+            "rev": "v4.35.0",
         },
         {
             "name": "cslib",
             "scope": "leanprover",
-            "rev": "v4.34.1",
+            "rev": "v4.35.0",
         },
     ]
     if config.get("require") != expected_requirements:

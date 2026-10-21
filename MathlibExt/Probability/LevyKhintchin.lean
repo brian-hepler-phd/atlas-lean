@@ -8,6 +8,8 @@ LICENSE file in the root directory of this source tree.
 
 module
 
+import Mathlib.MeasureTheory.Function.SpecialFunctions.Sinc
+
 public import Mathlib.MeasureTheory.Integral.Bochner.Basic
 public import Mathlib.MeasureTheory.Measure.CharacteristicFunction.Basic
 

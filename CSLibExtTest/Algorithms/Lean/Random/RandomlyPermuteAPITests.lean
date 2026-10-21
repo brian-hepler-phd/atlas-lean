@@ -31,7 +31,7 @@ example {α : Type u} (xs : Vector α 1) (draws : (i : Fin 1) → Fin (1 - i.val
 
 example {α : Type u} {n : Nat} (xs : Vector α n) :
     randomlyPermuteDistribution xs =
-      (PMF.uniformOfFintype (Equiv.Perm (Fin n))).map
+      (Cslib.Probability.PMF.uniformOfFintype (Equiv.Perm (Fin n))).map
         (fun σ => (⟨Vector.ofFn (fun p => xs[(σ p).val]), (n, n)⟩ :
           Cslib.Algorithms.Lean.TimeM (Nat × Nat) (Vector α n))) :=
   randomlyPermuteDistribution_eq_map_uniform xs
@@ -82,7 +82,7 @@ example {α : Type u} (xs : Vector α 1) :
   simp
 
 example : randomlyPermuteDistribution (⟨#["a", "a", "b"], rfl⟩ : Vector String 3) =
-    (PMF.uniformOfFintype (Equiv.Perm (Fin 3))).map
+    (Cslib.Probability.PMF.uniformOfFintype (Equiv.Perm (Fin 3))).map
       (fun σ => (⟨Vector.ofFn (fun p =>
         (⟨#["a", "a", "b"], rfl⟩ : Vector String 3)[(σ p).val]), (3, 3)⟩ :
           Cslib.Algorithms.Lean.TimeM (Nat × Nat) (Vector String 3))) :=

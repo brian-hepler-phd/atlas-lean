@@ -131,7 +131,7 @@ theorem tuple186_admissible : MetaMathlibExt.IsHardyLittlewoodAdmissible 40 tupl
   intro p hp
   by_cases h : p < 41
   · have small : ∀ q ∈ Finset.range 41, Nat.Prime q →
-        MetaMathlibExt.hardyLittlewoodResidueCount 40 tuple186 q ≠ q := by decide
+        MetaMathlibExt.hardyLittlewoodResidueCount 40 tuple186 q ≠ q := by decide +kernel
     exact small p (Finset.mem_range.mpr h) hp
   · have hcard : MetaMathlibExt.hardyLittlewoodResidueCount 40 tuple186 p ≤ 40 := by
       unfold MetaMathlibExt.hardyLittlewoodResidueCount

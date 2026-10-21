@@ -12,6 +12,7 @@ public import Batteries.Data.Array.Match
 public import Batteries.Data.List.Basic
 public import CSLibExt.Algorithms.Lean.StringMatching.Basic
 public import Cslib.Algorithms.Lean.TimeM
+import all Batteries.Data.Array.Match
 
 import Batteries.Data.List.Lemmas
 
