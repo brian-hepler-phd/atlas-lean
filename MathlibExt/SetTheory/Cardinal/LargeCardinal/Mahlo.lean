@@ -32,13 +32,17 @@ namespace MetaMathlibExt
 
 -- Logic 28: Mahlo cardinal
 
-/-- Source: Jech. -/
+/-- A cardinal κ is *Mahlo* if κ is inaccessible and the set {  λ < κ : λ  is inaccessible  } of
+inaccessibles below κ is stationary in κ.
+-/
 def IsMahlo.{u} (κ : Cardinal.{u}) : Prop :=
   Cardinal.IsInaccessible κ ∧ IsStationary (inaccessibleBelow κ)
 
 -- Logic 30: Weakly Mahlo cardinal
 
-/-- Source: Jech. -/
+/-- A cardinal κ is *weakly Mahlo* if κ is weakly inaccessible and {  λ < κ : λ  is a regular
+cardinal  } is stationary in κ.
+-/
 def IsWeaklyMahlo.{u} (κ : Cardinal.{u}) : Prop :=
   IsWeaklyInaccessible κ ∧
   IsStationary {α : Set.Iio κ.ord | (α.val.card).IsRegular ∧ α.val.card.ord = α.val}

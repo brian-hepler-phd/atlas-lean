@@ -34,13 +34,9 @@ namespace MetaMathlibExt
 
 -- Combinatorics 1: Generalized Johnson graph
 
-/-- The definition in the text is for positive integers, but later Kneser graphs are defined with
-$i=0$, so I have chosen to include this possibility.
-
-The graphs are never actually called "generalized Johnson graphs" in the book but they are defined
-in the section called "Johnson graphs", so I elected to use this name.
-
-Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 1.6, page 9.
+/-- Let v ≥ k ≥ i be non-negative integers. The *generalized Johnson graph* J(v,k,i) is the graph
+whose vertices are the k-subsets of {1,2,…,v}, and for which two distinct vertices are adjacent if
+and only if their intersection has size i.
 -/
 def johnsonGraph (v k i : ℕ) :
     SimpleGraph {S : Finset (Fin v) // S.card = k} where

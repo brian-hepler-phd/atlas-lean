@@ -39,12 +39,8 @@ namespace MetaMathlibExt
 def andrasfaiConnectionSet (k : ℕ) : Finset (ZMod (3 * k + 2)) :=
   {x | x.val % 3 = 1}
 
-/-- I have made the definition using $3k+2$ instead of $3k-1$. The point of this is that one can now
-just take $k : \N$ instead of enforcing $k \ge 1$, and also there are no issues in proofs where we
-have to explicitly state that things will be positive (these annoyances always seem to happen with
-subtraction of nats).
-
-Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 6.10 The Andrásfai Graphs, page 118.
+/-- The Andrásfai graph is the Cayley graph X(G,C) where G = ℤ₃ₖ₊₂ for some non-negative integer k
+and C is the subset of G consisting of the elements congruent to 1  (mod 3).
 -/
 def andrasfaiGraph (k : ℕ) : SimpleGraph (ZMod (3 * k + 2)) :=
   SimpleGraph.addCayley (andrasfaiConnectionSet k)

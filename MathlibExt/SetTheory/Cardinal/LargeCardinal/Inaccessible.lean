@@ -57,19 +57,21 @@ namespace MetaMathlibExt
 
 -- Logic 29: Weakly inaccessible cardinal
 
-/-- Source: Jech. -/
+/-- A cardinal κ is *weakly inaccessible* if it is an uncountable, regular limit cardinal. -/
 def IsWeaklyInaccessible.{u} (κ : Cardinal.{u}) : Prop :=
   ℵ₀ < κ ∧ κ.IsRegular ∧ Order.IsSuccLimit κ
 
 -- Logic 26: Set of inaccessible cardinality below κ
 
-/-- Source: Jech. -/
+/-- InAccBelow κ is the set of all inaccessible cardinals below κ. -/
 def inaccessibleBelow.{u} (κ : Cardinal.{u}) : Set (Set.Iio κ.ord) :=
   {α | Cardinal.IsInaccessible α.val.card ∧ α.val.card.ord = α.val}
 
 -- Logic 27: Inaccessible fixed point
 
-/-- Source: Jech. -/
+/-- A cardinal κ is an *inaccessible fixed point* if κ is inaccessible and the inaccessibles below κ
+have order type κ (i.e. κ is the κ-th inaccessible).
+-/
 def IsInaccessibleFixedPoint.{u} (κ : Cardinal.{u}) : Prop :=
   Cardinal.IsInaccessible κ ∧
   Ordinal.lift.{u+1} κ.ord = typeLT ↥(inaccessibleBelow κ)

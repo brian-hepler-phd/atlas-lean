@@ -35,7 +35,7 @@ namespace MetaMathlibExt
 
 -- Combinatorics 10: Petersen graph
 
-/-- Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 1.6 Johnson Graphs, page 9. -/
+/-- The Petersen graph is the generalized Johnson graph J(5,2,0). -/
 def petersenGraph : SimpleGraph {S : Finset (Fin 5) // S.card = 2} :=
   johnsonGraph 5 2 0
 

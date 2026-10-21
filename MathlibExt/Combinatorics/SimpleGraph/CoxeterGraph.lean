@@ -42,12 +42,10 @@ def fin4ToZMod7 : Fin 4 → ZMod 7
   | 2 => 2
   | 3 => 3
 
-/-- Note that the textbook definition appearing in the verbatim statement has some ambiguity that we
-fix in the natural language statement. Their ambiguity arises because they have an accompanying
-figure, and also an alternate explicit description of the Coxeter graph as an induced subgraph of
-the Kneser graph $J(7,3,0)$.
-
-Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 4.6 The Coxeter Graph, page 69.
+/-- The *Coxeter graph* is a 28 vertex graph that can be constructed in the following manner. Let
+the vertices be {(i,j) : i ∈ {0,1,2,3}, j ∈ ℤ₇}, and for each choice of i add the edge ((i,j),
+(i,j')) if and only if |j - j'| = i and j ≠ j'. Finally add the edges ((0,j), (i,j)) for each i ∈
+{1,2,3}.
 -/
 def coxeterGraph : SimpleGraph (Fin 4 × ZMod 7) :=
   SimpleGraph.fromRel fun a b =>

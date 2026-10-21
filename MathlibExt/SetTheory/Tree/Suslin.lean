@@ -34,16 +34,15 @@ namespace MetaMathlibExt
 
 -- Logic 24: $\kappa$-Suslin tree
 
-/-- Same comment as above. $\kappa$-Suslin trees don't behave well at singular $\kappa$.
-
-Source: Kunen.
--/
+/-- A κ-Suslin tree is a κ-Aronszajn tree with no antichains of size κ. -/
 def IsSuslinTreeAt.{u} (κ : Cardinal.{u}) (α : Type u) [PartialOrder α] [WellFoundedLT α] : Prop :=
     IsAronszajnTreeAt κ α ∧ ∀ A : Set α, IsAntichain (· ≤ ·) A → #A < κ
 
 -- Logic 19: Suslin tree
 
-/-- Source: Jech. -/
+/-- A *Suslin tree* is a tree of height $\aleph_1}$ with no uncountable branches and no uncountable
+antichains.
+-/
 def IsSuslinTree.{u} (α : Type u) [PartialOrder α] [WellFoundedLT α] : Prop :=
   IsSuslinTreeAt (aleph 1) α
 

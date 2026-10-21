@@ -29,7 +29,9 @@ namespace MetaMathlibExt
 
 -- Logic 31: Homogeneous set
 
-/-- Source: Jech. -/
+/-- A set H ⊆ I is *homogeneous* for a colouring c : [I]ⁿ → γ with colour k if c(s) = k for every
+n-element subset s ⊆ H.
+-/
 def IsHomogeneousFor {I : Type*} {γ : Type*} (n : ℕ) (c : Finset I → γ) (H : Set I) (k : γ) : Prop :=
   ∀ s : Finset I, s.card = n → (s : Set I) ⊆ H → c s = k
 

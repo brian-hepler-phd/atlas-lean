@@ -35,9 +35,7 @@ namespace MetaMathlibExt
 
 -- Combinatorics 19: Is Moore graph
 
-/-- Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 5 Generalized Polygons and Moore
-Graphs, page 77.
--/
+/-- A *Moore graph* is a graph with diameter d and girth 2d+1. -/
 def IsMooreGraph {V : Type*} [Fintype V] (G : SimpleGraph V) (d : ℕ) : Prop :=
   G.diam = d ∧ G.girth = 2 * d + 1
 

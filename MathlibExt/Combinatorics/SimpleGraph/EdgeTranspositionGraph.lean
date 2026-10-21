@@ -34,14 +34,8 @@ namespace MetaMathlibExt
 
 -- Combinatorics 432: Edge-transposition graph
 
-/-- Godsil & Royle do not give a name to this graph. I am calling it the edge-transposition graph,
-since the name "transposition graph" already exists (this is the Cayley graph $X(S_n,T)$ where $T$
-is the set of all transpositions of $S_n$).
-
-Note also that there is a pythonic-indexing thing going on since Fin n is the set
-$\{0,1,\dots,n-1\}$.
-
-Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 3.10, page 52.
+/-- Given a set of transpositions T of the symmetric group Sₙ, the *edge-transposition graph* is the
+graph X whose vertex set is {1,…,n}, and for which (i,j) ∈ E(X) if and only if (ij) ∈ T.
 -/
 def edgeTranspositionGraph {n : ℕ} (T : Set (Equiv.Perm (Fin n))) :
     SimpleGraph (Fin n) :=

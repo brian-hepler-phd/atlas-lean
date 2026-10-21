@@ -83,11 +83,6 @@ theorem almostDisjointModNS_of_ne :
 
 -- Logic 54: Almost disjoint family of functions
 
-/-- A family `F` of functions `κ → κ` is *almost disjoint* if any two distinct members
-agree on fewer than `κ` many points.  (Regularity of `κ` is not needed to state this; it
-is what makes the notion well behaved, since for regular `κ` the sets of size `< κ` form
-a `κ`-complete ideal.) -/
-
 theorem isAlmostDisjointFunFamily_pair_const.{u} {κ : Cardinal.{u}} (hκ : 0 < κ)
     {a b : Set.Iio κ.ord} (hab : a ≠ b) :
     IsAlmostDisjointFunFamily {(fun _ => a), (fun _ => b)} := by

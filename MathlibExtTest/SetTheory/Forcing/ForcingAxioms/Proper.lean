@@ -165,18 +165,6 @@ theorem exists_model_containing {P : Type*} (C : Set (Set (P ⊕ Set P))) (hC : 
     hC.cofinal {Sum.inl p, Sum.inr D} ((Set.finite_singleton _).insert _).countable
   exact ⟨y, hy, hsub (by simp), hsub (by simp)⟩
 
-/-- For each `a`, the countable sets containing `a` form a club — the club used below. -/
-
-theorem isClubOmega_mem {α : Type*} (a : α) : IsClubOmega {x : Set α | x.Countable ∧ a ∈ x} where
-  mem_countable _ hx := hx.1
-  cofinal x hx := ⟨insert a x, ⟨hx.insert a, Set.mem_insert a x⟩, Set.subset_insert a x⟩
-  closed _f hf _ := ⟨Set.countable_iUnion fun n => (hf n).1, Set.mem_iUnion.2 ⟨0, (hf 0).2⟩⟩
-
-/-- **`IsProper` is satisfiable**: the one-point poset is proper, with `q = p`.  Only a
-satisfiability witness, not evidence of content — on a linear order every pair of conditions is
-compatible, so `PUnit` cannot distinguish a good definition from a vacuous one.  That job belongs
-to `not_isProper_coll`. -/
-
 theorem isProper_punit : IsProper PUnit := by
   refine ⟨{x : Set (PUnit ⊕ Set PUnit) | x.Countable ∧ Sum.inl PUnit.unit ∈ x},
     isClubOmega_mem _, ?_⟩

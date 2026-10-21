@@ -39,7 +39,9 @@ namespace MetaMathlibExt
 
 -- Combinatorics 11: $s$-arc
 
-/-- Source: AGT Section 4.1. -/
+/-- An *s-arc* in a graph is a sequence of vertices (v₀, …, vₛ) such that consecutive vertices are
+adjacent and vᵢ₋₁ ≠ vᵢ₊₁ when 0 < i < s.
+-/
 structure _root_.SimpleGraph.SArc {V : Type*} [Fintype V] (G : SimpleGraph V) (s : ℕ) where
   vertices : Fin (s + 1) → V
   adj : ∀ i : Fin s, G.Adj (vertices i.castSucc) (vertices i.succ)
@@ -48,13 +50,15 @@ structure _root_.SimpleGraph.SArc {V : Type*} [Fintype V] (G : SimpleGraph V) (s
 
 -- Combinatorics 12: $s$-arc transitive
 
-/-- Source: AGT Section 4.1. -/
+/-- A graph is *s-arc transitive* if its automorphism group is transitive on s-arcs. -/
 def SimpleGraph.IsSArcTransitive {V : Type*} [Fintype V] (G : SimpleGraph V) (s : ℕ) : Prop :=
   ∀ p q : G.SArc s, ∃ φ : G ≃g G, ∀ i, φ (p.vertices i) = q.vertices i
 
 -- Combinatorics 13: $s$-arc regular
 
-/-- Source: AGT Section 4.1. -/
+/-- A graph is *s-arc regular* if for any two s-arcs there is a unique aotmorphism mapping the first
+to the second.
+-/
 def SimpleGraph.IsSArcRegular {V : Type*} [Fintype V] (G : SimpleGraph V) (s : ℕ) : Prop :=
   Nonempty (G.SArc s) ∧
   ∀ p q : G.SArc s, ∃! φ : G ≃g G, ∀ i : Fin (s + 1), φ (p.vertices i) = q.vertices i
@@ -79,7 +83,11 @@ def _root_.SimpleGraph.SArc.follows {V : Type*} [Fintype V]
     {G : SimpleGraph V} {s : ℕ} (a b : G.SArc s) : Prop :=
   ∃ c : G.SArc (s + 1), c.head = a ∧ c.tail = b
 
-/-- Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 4.2 Arc Graphs, page 61. -/
+/-- If s ≥ 1 and α = (x₀, …, xₛ), we define its *head* to be the (s-1)-arc (x₁, …, xₛ) and its
+*tail* to be the (s-1)-arc (x₀, …, xₛ₋₁). If α and β are s-arcs we say that β *follows* α if there
+is an (s+1)-arc whose tail is α and whose head is β. We use X⁽ˢ⁾ to denote the directed graph with
+the s-arcs of X as its vertices, such that (α, β) is an arc if and only if β follows α.
+-/
 def _root_.SimpleGraph.arcDigraph {V : Type*} [Fintype V]
     (G : SimpleGraph V) (s : ℕ) : Digraph (G.SArc s) where
   Adj a b := b.follows a

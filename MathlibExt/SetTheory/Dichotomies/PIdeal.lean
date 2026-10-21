@@ -30,12 +30,14 @@ namespace MetaMathlibExt
 
 -- Logic 340: Subset mod finite
 
-/-- Source: Jech. -/
+/-- a⊆_* b if a/ b is finite -/
 def SubsetModFinite {α : Type*} (a b : Set α) : Prop := (a \ b).Finite
 
 -- Logic 355: P-ideal
 
-/-- Source: Jech. -/
+/-- I is a P-ideal of countable sets on α: an ideal of countable sets containing all the
+finite ones and σ-directed modulo finite.
+-/
 structure IsPIdeal {α : Type*} (I : Set (Set α)) : Prop where
   countable : ∀ a ∈ I, a.Countable
   downward : ∀ a ∈ I, ∀ b ⊆ a, b ∈ I
@@ -45,13 +47,16 @@ structure IsPIdeal {α : Type*} (I : Set (Set α)) : Prop where
 
 -- Logic 356: Is Orthogonal To
 
-/-- Source: Jech. -/
+/-- X is orthonogonal to I if X∩ i is finite for all i∈ I -/
 def IsOrthogonalTo {α : Type*} (I : Set (Set α)) (X : Set α) : Prop :=
   ∀ a ∈ I, (X ∩ a).Finite
 
 -- Logic 357: P-ideal dichotomy
 
-/-- Source: Jech. -/
+/-- The P-ideal dichotomy (PID): for every P-ideal I of countable subsets of an uncountable
+set, either some uncountable set has all its countable subsets in I, or the whole set is a
+countable union of sets orthogonal to I.
+-/
 def PIdealDichotomy.{u} : Prop :=
   ∀ (α : Type u) (I : Set (Set α)), ¬ (Set.univ : Set α).Countable → IsPIdeal I →
     (∃ A : Set α, ¬ A.Countable ∧ ∀ x ∈ CountableSubsets α, x ⊆ A → x ∈ I) ∨

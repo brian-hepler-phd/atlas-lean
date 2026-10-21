@@ -46,11 +46,10 @@ def FracClique.weight {V : Type*} [Fintype V] {G : SimpleGraph V}
     (c : FracClique G) : ℝ :=
   ∑ v ∈ Finset.univ, c.w v
 
-/-- The main thing to note here is that the fractional clique number ends up being rational (hence
-"fractional"), but this is a consequence of later results, so we elect to define it as in the
-textbook.
-
-Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 7.2 Fractional Cliques, page 136.
+/-- A *fractional clique* of a graph X is a nonnegative real-valued function on V(X) such that the
+sum of the values of the function of any independent set is at most one. The *weight* of a
+fractional clique is the sum of its values. The *fractional clique number* of X is the maximum
+possible weight of a fractional clique, and is denoted by ω^*(X).
 -/
 noncomputable def _root_.SimpleGraph.fracCliqueNumber {V : Type*} [Fintype V]
     (G : SimpleGraph V) : ℝ :=

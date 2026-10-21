@@ -51,13 +51,12 @@ def FracColouring.weight {V : Type*} [Fintype V] [DecidableEq V] {G : SimpleGrap
     (c : FracColouring G) : ℝ :=
   ∑ s ∈ Finset.univ, c.w s
 
-/-- Note that Godsil/Royle cheat a bit in their definition, defining the fractional chromatic number
-to be the MINIMUM instead of the INFIMUM and justify this later. In the natural language statement,
-I use infimum, with the idea that later there would be simple theorems justifying that the
-fractional chromatic number is actually attainable by some fractional colouring (and that it is
-rational).
-
-Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 7.1, page 135-136.
+/-- We will use ℐ(X) to denote the set of all independent sets of [a finite graph] X, and ℐ(X,u) to
+denote the independent sets that contain the vertex u. A *fractional colouring* of a graph X is a
+nonnegative real-valued function f on ℐ(X) such that for any vertex x of X, ∑_{S ∈ ℐ(X,x)} f(S) ≥ 1.
+The *weight* of a fractional chromatic colouring is the sum of all its values, and the
+\emph{fractional chromatic number χ^*(X) of the graph X is the infimum over weights of all possible
+fractional colourings.
 -/
 noncomputable def _root_.SimpleGraph.fracChromaticNumber {V : Type*} [Fintype V] [DecidableEq V]
     (G : SimpleGraph V) : ℝ :=
@@ -65,8 +64,8 @@ noncomputable def _root_.SimpleGraph.fracChromaticNumber {V : Type*} [Fintype V]
 
 -- Combinatorics 438: Regular fractional colouring
 
-/-- Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 7.1 Fractional Colourings and
-Cliques, page 136.
+/-- A fractional colouring is *regular* if, for each vertex x of a finite graph X, we have ∑_{S ∈
+ℐ(X,x)} f(S) = 1, where ℐ(X,x) is the set of independent sets of X containing x.
 -/
 def FracColouring.IsRegular {V : Type*} [Fintype V] [DecidableEq V] {G : SimpleGraph V}
     (c : FracColouring G) : Prop :=

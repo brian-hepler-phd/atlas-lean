@@ -176,8 +176,6 @@ example : K2.IsLocalInjection K2 SimpleGraph.Hom.id :=
 abbrev twoK2 : SimpleGraph (Fin 2 × Fin 2) :=
   SimpleGraph.fromRel fun u v => u.2 = v.2
 
-/-- Sanity check: `K₂` on `Fin 2`. -/
-
 instance twoK2_decidableAdj : DecidableRel twoK2.Adj := fun a b => by
   unfold twoK2 SimpleGraph.fromRel
   infer_instance
@@ -206,8 +204,6 @@ theorem twoK2_to_K2_localIso :
 -- Combinatorics 429: Covers (graph)
 
 -- NOTE: this sanity check builds trivially on the local isomorphism sanity check.
-
-/- Sanity check: `2K₂`, two disjoint edges on `Fin 2 × Fin 2`. -/
 
 example : twoK2.Covers K2 := by
   refine ⟨twoK2_to_K2, twoK2_to_K2_localIso, ?_⟩

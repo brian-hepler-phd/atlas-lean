@@ -38,11 +38,46 @@ namespace MetaMathlibExt
 -- Combinatorics 490: Omega Involution
 
 
-/-- The map $\omega$ depends on the number of variables. This number
-is not given separately. It is $n$, the number of elements of
-$V$, and it is fixed once $V$ is fixed.
+/-! ### Informal statement of `MvPolynomial.omegaAlgHom`
 
-Source: ec2 7.8.2.
+Let R be a commutative ring, let n∈ℤ_{≥ 0}, and
+let V be a finite set with n elements. A polynomial f in
+the polynomial ring R[xᵥ:v∈ V] is symmetric if, for every
+bijection π: V→ V, substituting x_{π(v)} for xᵥ
+for every v∈ V leaves f unchanged. For
+k∈ℤ_{≥ 0}, the elementary symmetric polynomial
+eₖ and the complete homogeneous symmetric polynomial hₖ are
+
+  eₖ=∑_T∏_{v∈ T}xᵥ
+
+and
+
+  hₖ=∑_M∏_{v∈ M}xᵥ,
+
+where T runs over all k-element subsets of V, M runs over
+all multisets of size k with elements from V, and each
+element of M appears in the product as often as it occurs in
+M. In particular e₀=h₀=1. By the fundamental theorem of
+symmetric polynomials, every symmetric polynomial f equals
+P(e₁,…,eₙ) for exactly one polynomial
+P∈ R[y₁,…,yₙ], where P(e₁,…,eₙ) is obtained
+from P by substituting eᵢ for yᵢ for 1≤ i≤ n. The
+omega involution ω sends such an f to
+
+  ω(f)=P(h₁,…,hₙ),
+
+obtained from P by substituting hᵢ for yᵢ for
+1≤ i≤ n. Thus ω is the R-algebra homomorphism
+from the symmetric polynomials to the symmetric polynomials with
+ω(eₖ)=hₖ for 1≤ k≤ n. When n=0, every
+polynomial is a constant and ω(f)=f.
+-/
+
+/-- Let R be a commutative ring, let n∈ℤ_{≥ 0}, and let V be a finite set with n elements. A
+polynomial f in the polynomial ring R[xᵥ:v∈ V] is symmetric if, for every bijection π: V→ V,
+substituting x_{π(v)} for xᵥ for every v∈ V leaves f unchanged.
+
+The full informal statement is in the module documentation directly above.
 -/
 noncomputable def MvPolynomial.omegaAlgHom (σ R : Type*)
     [CommRing R] [Fintype σ] [DecidableEq σ] :
@@ -58,12 +93,23 @@ noncomputable def MvPolynomial.omegaAlgHom (σ R : Type*)
 -- Combinatorics 494: Exponential Specialization
 
 
-/-- The variable $x_i$ is the variable indexed by $i-1$, so
-$[x_1\cdots x_m]f$ is the coefficient of the monomial with
-exponent $1$ at each of the indices $0,1,\ldots,m-1$ and exponent
-$0$ elsewhere.
+/-- Let ℚ[[x₁,x₂,…]] be the ring of formal power
+series in the variables x₁,x₂,… with rational
+coefficients. Its elements are the formal sums
+f=∑_αc_α x^α, where
+α=(α₁,α₂,…) runs over the sequences of
+nonnegative integers with only finitely many nonzero terms,
+c_α∈ℚ, and
+x^α=x₁^{α₁}x₂^{α₂}⋯. For
+m∈ℤ_{≥ 0}, write [x₁⋯ xₘ]f for the
+coefficient c_α of the sequence α in which, for
+each i∈ℤ_{≥ 1}, αᵢ=1 if i≤ m and
+αᵢ=0 if i>m. For m=0 this is the constant term of
+f. Let ℚ[[t]] be the ring of formal power series in
+one variable t. The exponential specialization of f is
 
-Source: ec2 7.8 p 304.
+  ex(f)=∑_{m∈ℤ_{≥ 0}}
+  tᵐ/(m!) [x₁⋯ xₘ]f.
 -/
 noncomputable def _root_.MvPowerSeries.exponentialSpecialization
     (f : MvPowerSeries ℕ ℚ) : PowerSeries ℚ :=
@@ -74,7 +120,33 @@ noncomputable def _root_.MvPowerSeries.exponentialSpecialization
 -- Combinatorics 495: Scalar Product of Symmetric Polynomials
 
 
-/-- Source: ec2 7.15 p 336. -/
+/-- Let n∈ℤ_{≥ 0}, write [n]={1,…,n}, so
+that [0]=∅, and let R be a commutative ring. A
+polynomial f in R[x₁,…,xₙ] is symmetric if, for every
+bijection π:[n]→[n], substituting x_{π(i)} for
+xᵢ for every i∈[n] leaves f unchanged. Let
+
+  a_δ=∏_{1≤ i<j≤ n}(xᵢ-xⱼ),
+
+so that a_δ=1 when n≤ 1. For a polynomial P and a
+sequence λ=[λ₁,…,λₙ] of integers with
+λᵢ≥ 0 for every i∈[n] and
+λᵢ≥λᵢ₊₁ for 1≤ i≤ n-1, write
+[x^{λ+δ}]P for the coefficient in P of the
+monomial
+
+  x^{λ+δ}=∏ᵢ₌₁ⁿxᵢ^{λᵢ+n-i}.
+
+When n=0, the only such sequence is the empty one, and
+x^{λ+δ}=1. For symmetric polynomials f and g in
+R[x₁,…,xₙ], the scalar product of f and g is
+
+  ⟨ f,g⟩ₙ=∑_λ
+  [x^{λ+δ}](a_δ f)
+  [x^{λ+δ}](a_δ g),
+
+the sum taken over all sequences λ as above.
+-/
 noncomputable def symmetricScalarProduct {n : ℕ} {R : Type*}
     [CommRing R]
     (f g : MvPolynomial.symmetricSubalgebra (Fin n) R) : R :=
@@ -88,10 +160,31 @@ noncomputable def symmetricScalarProduct {n : ℕ} {R : Type*}
 -- Combinatorics 497: Skew Shape
 
 
-/-- The cell $(i,j)$ is the cell with row index $i-1$ and column
-index $j-1$.
+/-- Let m∈ℤ_{≥ 0}. A partition is a list
+λ=[λ₁,…,λₘ] of integers, called its
+parts, such that, if m≥ 1,
 
-Source: ec2 7.10 p 309.
+  λ₁≥λ₂≥⋯≥λₘ≥ 1.
+
+If m=0, then λ is the empty list, called the empty
+partition and written ∅. Set λₖ=0 for every
+k∈ℤ_{≥ 1} with k>m. The diagram of λ is
+the set
+
+  D(λ)={(i,j)∈ℤ_{≥ 1}×ℤ_{≥ 1}
+  :j≤λᵢ},
+
+whose elements are called cells. The cell (i,j) is in row i
+and column j, with rows numbered from 1 starting at the top
+and columns numbered from 1 starting at the left. If m=0,
+then D(∅)=∅. A partition is identified with
+its diagram. For partitions λ and μ, write
+μ⊆λ when D(μ)⊆ D(λ), that is,
+when every cell of D(μ) is a cell of D(λ).
+
+A skew shape is an ordered pair of partitions, an outer
+partition λ and an inner partition μ, with
+μ⊆λ. It is written λ/μ.
 -/
 structure SkewShape where
   outer : YoungDiagram
@@ -101,10 +194,37 @@ structure SkewShape where
 -- Combinatorics 498: Semistandard Young Tableau of Skew Shape
 
 
-/-- The value $T_{i,j}$ is the entry at row index $i-1$ and column
-index $j-1$.
+/-- Let λ/μ be a skew shape. For k∈ℤ_{≥ 1},
+write λₖ for the k-th part of λ if λ
+has at least k parts, and λₖ=0 otherwise, and define
+μₖ in the same way. The cells of λ/μ are the pairs
+(i,j)∈ℤ_{≥ 1}×ℤ_{≥ 1} with
 
-Source: ec2 7.10 p 309.
+  μᵢ<j≤λᵢ,
+
+that is, the cells of D(λ) that are not cells of
+D(μ).
+
+A semistandard Young tableau of shape λ/μ is a
+function T that assigns to each pair
+(i,j)∈ℤ_{≥ 1}×ℤ_{≥ 1} an integer
+T_{i,j}∈ℤ_{≥ 0}, subject to four conditions.
+First, T_{i,j}≥ 1 for every cell (i,j) of λ/μ.
+Second, the rows weakly increase from left to right, meaning
+that
+
+  T_{i,j}≤ T_{i,j'}
+
+whenever (i,j) and (i,j') are cells of λ/μ with
+j<j'. Third, the columns strictly increase from top to bottom,
+meaning that
+
+  T_{i,j}<T_{i',j}
+
+whenever (i,j) and (i',j) are cells of λ/μ with
+i<i'. Fourth, T_{i,j}=0 for every pair
+(i,j)∈ℤ_{≥ 1}×ℤ_{≥ 1} that is
+not a cell of λ/μ.
 -/
 structure SkewSemistandardYoungTableau (s : SkewShape) where
   entry : ℕ → ℕ → ℕ
@@ -124,10 +244,25 @@ structure SkewSemistandardYoungTableau (s : SkewShape) where
 -- Combinatorics 500: Standard Young Tableau of Skew Shape
 
 
-/-- The value $T_{i,j}$ is the entry at row index $i-1$ and column
-index $j-1$.
+/-- Let λ/μ be a skew shape. For k∈ℤ_{≥ 1},
+write λₖ for the k-th part of λ if λ
+has at least k parts, and λₖ=0 otherwise, and define
+μₖ in the same way. The cells of λ/μ are the pairs
+(i,j)∈ℤ_{≥ 1}×ℤ_{≥ 1} with
 
-Source: ec2 7.10 p 312.
+  μᵢ<j≤λᵢ,
+
+that is, the cells of D(λ) that are not cells of
+D(μ). Let n∈ℤ_{≥ 0} be the number of cells of
+λ/μ, and write [n]={1,…,n}, so that
+[0]=∅.
+
+A standard Young tableau of shape λ/μ is a
+semistandard Young tableau T of shape λ/μ such that
+the map (i,j)↦ T_{i,j} sends the cells of λ/μ
+bijectively onto [n]. If μ=∅, a standard Young
+tableau of shape λ/∅ is also called a standard
+Young tableau of shape λ.
 -/
 structure SkewStandardYoungTableau (s : SkewShape) extends
     SkewSemistandardYoungTableau s where

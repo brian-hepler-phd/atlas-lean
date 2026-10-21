@@ -31,12 +31,15 @@ namespace MetaMathlibExt
 
 -- Logic 351: Equal mod finite
 
-/-- Source: Jech. -/
+/-- A =^* B (equal mod finite) if the symmetric difference between A and B is finite. -/
 def EqModFinite (A B : Set ℕ) : Prop := (symmDiff A B).Finite
 
 -- Logic 352: $P(\omega)\slash \textrm{fin}$ automorphism
 
-/-- Source: Jech. -/
+/-- Φ is an automorphism of P(ω)/ fin if presented on representatives, it respects =^* (equality
+modulo finite),
+preserves meets and complements modulo finite, is one-to-one and onto modulo finite.
+-/
 structure IsPowModFiniteAutomorphism (Φ : Set ℕ → Set ℕ) : Prop where
   respects : ∀ A B : Set ℕ, EqModFinite A B → EqModFinite (Φ A) (Φ B)
   inter : ∀ A B : Set ℕ, EqModFinite (Φ (A ∩ B)) (Φ A ∩ Φ B)

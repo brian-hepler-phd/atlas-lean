@@ -35,7 +35,9 @@ namespace MetaMathlibExt
 
 -- Combinatorics 428: Is line graph
 
-/-- Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 1.7 Line graphs, page 10. -/
+/-- The *line graph* of a finite graph X is the finite graph L(X) with the edges of X as its
+vertices, and where two edges of X are adjacent in L(X) if and only if they are incident in X.
+-/
 def SimpleGraph.IsLineGraph {V : Type*} [Fintype V] (G : SimpleGraph V) : Prop :=
   ∃ (k : ℕ) (H : SimpleGraph (Fin k)),
     Nonempty (G ≃g H.lineGraph)

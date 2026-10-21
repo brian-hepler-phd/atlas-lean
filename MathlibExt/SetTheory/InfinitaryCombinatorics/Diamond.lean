@@ -25,6 +25,9 @@ namespace MetaMathlibExt
 
 -- Logic 4: Diamond ($\Diamond$)
 
+/-- ◇_κ holds iff there is a sequence ⟨ S_α : α < κ⟩ with S_α ⊆ α for all α < κ, such that for every
+X ⊆ κ, {α < κ : X ∩ α = S_α} is stationary in κ.
+-/
 def Diamond.{u} (κ : Cardinal.{u}) : Prop :=
   ∃ S : Set.Iio κ.ord → Set Ordinal.{u},
     (∀ α : Set.Iio κ.ord, S α ⊆ Set.Iio (α : Ordinal.{u})) ∧
@@ -34,6 +37,9 @@ def Diamond.{u} (κ : Cardinal.{u}) : Prop :=
 
 -- Logic 5: Weak Diamond ($\Diamond^-$)
 
+/-- ◇⁻_κ holds iff there is a sequence ⟨ 𝒜_α : α < κ⟩ with each 𝒜_α ⊆ 𝒫(α) and |𝒜_α| ≤ |α|, such
+that for every X ⊆ κ the set {α < κ : X ∩ α ∈ 𝒜_α} is stationary in κ.
+-/
 def DiamondMinus.{u} (κ : Cardinal.{u}) : Prop :=
   ∃ A : Set.Iio κ.ord → Set (Set Ordinal.{u}),
     (∀ α : Set.Iio κ.ord,

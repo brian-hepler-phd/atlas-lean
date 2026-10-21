@@ -39,13 +39,9 @@ namespace MetaMathlibExt
 def cayleyArc {G : Type*} [Mul G] (C : Set G) (x y : G) : Prop :=
   ∃ c ∈ C, x * c = y
 
-/-- Cayley graphs are already in Mathlib, but the directed graph version (where $C$ is an arbitrary
-subset of $G$) are not. Therefore, we only implement this version.
-
-Note: in the original version of this definition I made the directedCayleyGraph actually output the
-adjacency and not the digraph itself. I've updated it now so it gives the actual digraph.
-
-Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 3.4 Vertex Connectivity, page 34.
+/-- Given a group G, and a subset C ⊆ G not containing the identity, the *Cayley digraph* is the
+directed graph X(G,C) whose vertices are the elements of G and for which there is a (Cayley) arc u →
+v whenever u, v ∈ G satisfy v = uc for some c ∈ C.
 -/
 def directedCayleyGraph {G : Type*} [Mul G] (S : Set G) : Digraph G where
   Adj := cayleyArc S

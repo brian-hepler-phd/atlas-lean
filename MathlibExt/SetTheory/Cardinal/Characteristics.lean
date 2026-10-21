@@ -33,13 +33,17 @@ namespace MetaMathlibExt
 
 -- Logic 361: Unbounded family
 
-/-- Source: Textbook (Jech). -/
+/-- A family F of functions f:ℕ→ ℕ is an unbounded family if no function g:ℕ→ ℕ bounds all functions
+in F. Here g bounds f if there is N such that for all n≥ N, f(n)≤ g(n).
+-/
 def IsUnboundedFamily (F : Set (ℕ → ℕ)) : Prop :=
   ¬ ∃ g : ℕ → ℕ, ∀ f ∈ F, f ≤ᶠ[Filter.atTop] g
 
 -- Logic 362: Bounding number
 
-/-- Source: Textbook (Jech). -/
+/-- The bounding number 𝔟 is the infimum of the cardinalities of all unbounded families of functions
+f:ℕ→ ℕ.
+-/
 noncomputable def boundingNumber : Cardinal :=
   sInf {c : Cardinal | ∃ F : Set (ℕ → ℕ), IsUnboundedFamily F ∧ #F = c}
 

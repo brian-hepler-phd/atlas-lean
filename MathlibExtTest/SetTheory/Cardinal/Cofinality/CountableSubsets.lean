@@ -17,7 +17,7 @@ public import Mathlib.Order.CompletePartialOrder
 
 @[expose] public section
 
-open Set
+open Set Order
 
 namespace MathlibExtTest.SetTheory.Cardinal.Cofinality.CountableSubsets
 
@@ -54,8 +54,6 @@ theorem countableSubsets_eq_univ_iff.{u} (α : Type u) :
 
 -- Logic 39: Club in $[X]^\omega$
 
-/-- `[α]^ω`, the countable subsets of `α`. -/
-
 theorem _root_.MetaMathlibExt.IsClubOmega.nonempty.{u} {α : Type u} {C : Set (Set α)} (hC : IsClubOmega C) :
     C.Nonempty :=
   (hC.cofinal ∅ Set.countable_empty).imp fun _ hy => hy.1
@@ -81,8 +79,6 @@ theorem not_isClubOmega_empty.{u} {α : Type u} : ¬ IsClubOmega (∅ : Set (Set
 
 -- Logic 40: Stationarity in $[X]^\omega$
 
-/-- Supporting fact: `[α]^ω` is a club, so at least one club exists. -/
-
 theorem not_isStationaryOmega_empty.{u} {α : Type u} :
     ¬ IsStationaryOmega (∅ : Set (Set α)) := by
   intro h
@@ -95,12 +91,6 @@ theorem isStationaryOmega_countableSubsets.{u} (α : Type u) :
     IsStationaryOmega (CountableSubsets α) :=
   fun _ hC => (hC.cofinal ∅ Set.countable_empty).imp
     fun y hy => ⟨hC.mem_countable y hy.1, hy.1⟩
-
-/-- Stationarity is upward closed — the structural property everything downstream uses. -/
-
-theorem _root_.MetaMathlibExt.IsStationaryOmega.mono.{u} {α : Type u} {S T : Set (Set α)}
-    (hS : IsStationaryOmega S) (hST : S ⊆ T) : IsStationaryOmega T :=
-  fun _ hC => (hS hC).imp fun _ hx => ⟨hST hx.1, hx.2⟩
 
 -- Logic 41: Closure points
 

@@ -40,7 +40,10 @@ namespace MetaMathlibExt
 
 -- Combinatorics 2: Retract
 
-/-- Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 1.4, page 7. -/
+/-- A *retraction* is a homomorphism f from a graph X to a subgraph Y of itself such that the
+restriction f|_Y of f to V(Y) is the identity map. If there is a retraction from X to a subgraph Y,
+then we say that Y is a *retract* of X.
+-/
 def _root_.SimpleGraph.Subgraph.IsRetract {V : Type*} {G : SimpleGraph V}
     (H : G.Subgraph) : Prop :=
   ∃ φ : G →g H.coe, ∀ (h : H.verts), φ h.val = h
@@ -50,16 +53,18 @@ def _root_.SimpleGraph.Subgraph.IsRetract {V : Type*} {G : SimpleGraph V}
 def _root_.SimpleGraph.IsCore {V : Type*} [Fintype V] (X : SimpleGraph V) : Prop :=
   ∀ f : X →g X, Function.Bijective f
 
-/-- Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 6.2 Cores, page 104. -/
+/-- A finite graph X is a *core* if every homomorphism from X to itself is a bijection. A subgraph Y
+of a finite graph X is a *core of X* if Y, as a graph in its own right, is a core and there is a
+homomorphism from X to Y.
+-/
 def _root_.SimpleGraph.HasCore {V W : Type*} [Fintype V] [Fintype W]
     (X : SimpleGraph V) (Y : SimpleGraph W) : Prop :=
   Y.IsCore ∧ Nonempty (X →g Y) ∧ ∃ f : Y →g X, Function.Injective f
 
 -- Combinatorics 23: Local injection
 
-/-- As usual we add in "finite" since all graphs in Godsil/Royle are assumed to be finite.
-
-Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 6.8, page 115.
+/-- We call a homomorphism between finite graphs a *local injection* if the minimum distance between
+two vertices in the same fibre is at least three.
 -/
 def _root_.SimpleGraph.IsLocalInjection {V W : Type*} [Fintype V] [Fintype W] (G : SimpleGraph V) (H : SimpleGraph W)
     (f : G →g H) : Prop :=
@@ -67,8 +72,10 @@ def _root_.SimpleGraph.IsLocalInjection {V W : Type*} [Fintype V] [Fintype W] (G
 
 -- Combinatorics 24: Local isomorphism
 
-/-- Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 6.8 Foldings and Covers, page
-115.
+/-- A homomorphism f from X to Y is a *local isomorphism* if for each vertex y of Y, the induced
+mapping from the set of neighbours of a vertex in f⁻¹(y) to the neighbours of y is bijective. We
+call f a covering map if it is a surjective local isomorphism, in which case we say that X *covers*
+Y.
 -/
 def _root_.SimpleGraph.IsLocalIsomorphism {V W : Type*} [Fintype V] [Fintype W] (G : SimpleGraph V) (H : SimpleGraph W)
     (f : G →g H) : Prop :=
@@ -76,8 +83,8 @@ def _root_.SimpleGraph.IsLocalIsomorphism {V W : Type*} [Fintype V] [Fintype W] 
 
 -- Combinatorics 429: Covers (graph)
 
-/-- Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 6.8 Foldings and Covers, page
-115.
+/-- We say that a finite graph X covers a finite graph Y if there is a surjective local isomorphism
+from X to Y.
 -/
 def _root_.SimpleGraph.Covers {V W : Type*} [Fintype V] [Fintype W] (G : SimpleGraph V) (H : SimpleGraph W) : Prop :=
   ∃ f : G →g H, G.IsLocalIsomorphism H f ∧ Function.Surjective f
@@ -89,8 +96,9 @@ def _root_.SimpleGraph.IsSimpleFolding.{u} {V W : Type u} (G : SimpleGraph V) (H
   ∃ a b : V, a ≠ b ∧ G.edist a b = 2 ∧ f a = f b ∧
     ∀ x y : V, f x = f y → x = y ∨ (x = a ∧ y = b) ∨ (x = b ∧ y = a)
 
-/-- Source: Algebraic Graph Theory, Godsil & Royle (2001), Section 6.8 Foldings and Covers, page
-114.
+/-- A homomorphism from X to Y is a *simple folding* if it has one fibre consisting of two vertices
+at distance two, and all other fibres are singletons. A homomorphism is a *folding* if it is the
+composition of a non-negative number of simple foldings.
 -/
 inductive _root_.SimpleGraph.IsFolding.{u} : ∀ {V W : Type u} (G : SimpleGraph V) (H : SimpleGraph W)
     (_f : G →g H), Prop where

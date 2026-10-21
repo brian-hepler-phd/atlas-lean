@@ -34,19 +34,26 @@ namespace MetaMathlibExt
 
 -- Logic 10: Countable chain condition in a partial order
 
-/-- Source: Kunen. -/
+/-- A partial order (P, ≤) has the countable chain condition (c.c.c.) if every antichain is
+countable.
+-/
 def IsCCC (P : Type*) [PartialOrder P] : Prop :=
     ∀ A : Set P, IsAntichain (fun p q : P => ∃ r, r ≤ p ∧ r ≤ q) A → A.Countable
 
 -- Logic 13: $\sigma$-centered posets
 
-/-- Source: Handbook of Set Theory. -/
+/-- A poset is σ-centred when it splits into countably many centered pieces: every
+  finite subset of a piece has a common lower bound.
+-/
 def IsSigmaCentered (P : Type*) [PartialOrder P] : Prop :=
   ∃ c : P → ℕ, ∀ (n : ℕ) (s : Finset P), (∀ p ∈ s, c p = n) → ∃ r : P, ∀ p ∈ s, r ≤ p
 
 -- Logic 14: Martin's Axiom for $\sigma$-centered posets
 
-/-- Source: Handbook of Set Theory. -/
+/-- Martin's Axiom for σ-centred posets: any σ-centered poset (P,≤), for any sequence (D_α : α<κ')
+of dense subsets of the partial order for some κ'≤ κ, for any condition p∈ P, there is a filter G
+meeting all D_α's and p∈ G.
+-/
 def MartinAxiomSigmaCentered (κ : Cardinal) : Prop :=
    ∀ (P : Type*) [PartialOrder P], IsSigmaCentered P →
      ∀ D : Set (Set P), (∀ S ∈ D, IsCoinitial S) → Cardinal.mk D ≤ κ →
@@ -54,7 +61,10 @@ def MartinAxiomSigmaCentered (κ : Cardinal) : Prop :=
 
 -- Logic 9: Martin's Axiom
 
-/-- Source: Kunen. -/
+/-- MA(κ) is the statement that for any ccc poset (P,≤), for any sequence (D_α : α<κ') of dense
+subsets of the partial order for some κ'≤ κ, for any condition p∈ P, there is a filter G meeting all
+D_α's and p∈ G.
+-/
 def MartinAxiom (κ : Cardinal) : Prop :=
   ∀ (P : Type*) [PartialOrder P], IsCCC P →
     ∀ D : Set (Set P), (∀ S ∈ D, IsCoinitial S) → Cardinal.mk D ≤ κ →

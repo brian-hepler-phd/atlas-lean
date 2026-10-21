@@ -30,7 +30,7 @@ namespace MetaMathlibExt
 
 -- Logic 11: A Delta system
 
-/-- Source: Kunen. -/
+/-- A is a Δ-system with root r if for any two distinct members s,t of A, s∩ t = r. -/
 def IsDeltaSystem {α : Type*} (A : Set (Set α)) (r : Set α) : Prop :=
     A.Pairwise fun s t => s ∩ t = r
 

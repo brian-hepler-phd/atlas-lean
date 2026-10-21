@@ -33,7 +33,9 @@ namespace MetaMathlibExt
 
 -- Logic 33: Weakly compact cardinal
 
-/-- Source: Jech. -/
+/-- A cardinal κ is *weakly compact* if ℵ₀ < κ and κ → (κ)²₂: every 2-colouring of [I]², where |I| =
+κ, admits a homogeneous set H ⊆ I with |H| = κ.
+-/
 def IsWeaklyCompact (κ : Cardinal) : Prop :=
   ℵ₀ < κ ∧
   ∀ (I : Type) (_ : #I = κ) (F : Finset I → Bool),

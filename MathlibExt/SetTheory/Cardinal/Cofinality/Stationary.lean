@@ -34,14 +34,31 @@ namespace MetaMathlibExt
 
 -- Logic 42: Contains all bounded sets
 
-/-- Source: Jech. -/
+/-- A set X⊆κ is *bounded in κ* if there is some
+β<κ with α<β for every α∈ X; equivalently,
+X⊆β for some β<κ.
+
+A family I⊆𝒫(κ) *contains all bounded sets*
+if every bounded X⊆κ belongs to I:
+
+  ∀ X ⊆ κ  [
+    (∃ β < κ ∀ α ∈ X, α < β)
+     ⟶  X ∈ I
+   ].
+-/
 def ContainsAllBounded.{u} (κ : Cardinal.{u}) (I : Set (Set (Set.Iio κ.ord))) : Prop :=
   ∀ X : Set (Set.Iio κ.ord),
     (∃ β : Set.Iio κ.ord, ∀ α ∈ X, (α : Ordinal) < (β : Ordinal)) → X ∈ I
 
 -- Logic 52: $\kappa$-complete ideal
 
-/-- Source: Jech. -/
+/-- A *κ-complete ideal on κ* is a collection I ⊆ 𝒫(κ) such that:
+
+1. ∅ ∈ I.
+1. If A ∈ I and B ⊆ A, then B ∈ I.
+1. κ ∉ I.
+1. If λ < κ and ⟨ A_α : α < λ ⟩ is a sequence of members of I, then [ ⋃_{α < λ} A_α ∈ I. ]
+-/
 structure IsKappaCompleteIdeal.{u} (κ : Cardinal.{u})
     (I : Set (Set (Set.Iio κ.ord))) : Prop where
   downward : ∀ X ∈ I, ∀ Y ⊆ X, Y ∈ I
@@ -52,7 +69,20 @@ structure IsKappaCompleteIdeal.{u} (κ : Cardinal.{u})
 
 -- Logic 53: Normal ideal on $\kappa$
 
-/-- Source: Jech. -/
+/-- Let κ be a cardinal, identified with
+κ = Iio(κ.ord) = {α : Ordinal ∣ α < κ.ord},
+and let I⊆𝒫(κ).
+
+I is *normal* if it is closed under diagonal unions: for every
+κ-sequence ⟨ A_ξ : ξ<κ⟩ with A_ξ∈ I,
+
+  ∇_{ξ<κ} A_ξ := {α<κ ∣ ∃ ξ<α, α∈ A_ξ} ∈ I.
+
+Formally,
+
+  ∀ A : κ → 𝒫(κ),  (∀ ξ, A_ξ∈ I) →
+  {α∈κ ∣ ∃ ξ∈κ, ξ<α ∧ α∈ A_ξ}∈ I.
+-/
 def IsNormalIdeal.{u} (κ : Cardinal.{u}) (I : Set (Set (Set.Iio κ.ord))) : Prop :=
   ∀ (A : Set.Iio κ.ord → Set (Set.Iio κ.ord)),
     (∀ ξ, A ξ ∈ I) →
@@ -60,16 +90,7 @@ def IsNormalIdeal.{u} (κ : Cardinal.{u}) (I : Set (Set (Set.Iio κ.ord))) : Pro
 
 -- Logic 2: Regressive function
 
-/-- The lean formalization assumes that the underlying set $S$ is a subset of a cardinal $\kappa$.
-This is what is needed for Fodor's lemma, and in Set Theory in general. If we want to change this
-into the more general definition where $S$ is an arbitrary set of ordinals, then a bridging Lemma
-would be needed to state Fodor's Theorem, which adds an extra layer of complexity, which in my
-opinion is unnecessary. I would suggest we use this definition for now, and if the more general
-definition is needed in topology, for example, then we just add a new more general definition at
-that time.
-
-Source: Jech.
--/
+/-- An ordinal function f on a set S is *regressive* if f(α )<α for all α ∈ S with α ≠ 0. -/
 def IsRegressive (κ : Cardinal)
     (S : Set (Set.Iio κ.ord)) (f : ↥S → Set.Iio κ.ord) : Prop :=
   ∀ x : ↥S, (x : Ordinal) ≠ 0 → (f x : Ordinal) < (x : Ordinal)

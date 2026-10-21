@@ -32,18 +32,20 @@ namespace MetaMathlibExt
 
 -- Logic 359: Tukey Reducibility
 
-/-- Source: Kunen. -/
+/-- D ≤_T E if there is a convergent (Tukey) map D → E, one carrying unbounded subsets of
+D to unbounded subsets of E.
+-/
 def TukeyLE (D E : Type) [Preorder D] [Preorder E] : Prop :=
   ∃ f : D → E, ∀ A : Set D, (¬ ∃ b : D, ∀ a ∈ A, a ≤ b) → ¬ ∃ b : E, ∀ a ∈ f '' A, a ≤ b
 
 -- Logic 360: Tukey equivalence
 
-/-- Source: Jech. -/
+/-- D ≡_T E: cofinal (Tukey) equivalence means Tukey reducibility in both directions. -/
 def TukeyEquiv (D E : Type) [Preorder D] [Preorder E] : Prop := TukeyLE D E ∧ TukeyLE E D
 
 -- Logic 405: Cofinal type
 
-/-- Source: Jech. -/
+/-- A cofinal type is a ≡_T-equivalence class of preordered sets. -/
 def CofinalType : Type 1 :=
   Quotient (α := Σ D : Type, Preorder D)
     { r := fun X Y => @TukeyEquiv X.1 Y.1 X.2 Y.2

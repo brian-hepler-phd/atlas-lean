@@ -33,7 +33,9 @@ namespace MetaMathlibExt
 
 -- Logic 32: Ramsey ultrafilter
 
-/-- Source: Jech. -/
+/-- An ultrafilter U on ℕ is *Ramsey* if for every countable partition {Aₙ} of ℕ with Aₙ ∉ U for all
+n, there is X ∈ U with |X ∩ Aₙ| ≤ 1 for each n.
+-/
 def IsRamseyUltrafilter (U : Ultrafilter ℕ) : Prop :=
   ∀ A : ℕ → Set ℕ, Pairwise (Disjoint on A) → (⋃ n, A n) = univ → (∀ n, A n ∉ U) →
     ∃ X ∈ U, ∀ n, (X ∩ A n).Subsingleton

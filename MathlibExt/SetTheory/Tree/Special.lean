@@ -31,13 +31,19 @@ namespace MetaMathlibExt
 
 -- Logic 16: Union of ω antichains
 
-/-- Source: Jech. -/
+/-- A partial order (P, ≤) is a *union of ω antichains* if P = ⋃_{n<ω} Aₙ where each Aₙ ⊆ P is an
+antichain (a set of pairwise ≤-incomparable elements).
+-/
 def IsUnionOfOmegaAntichains.{u} (α : Type u) [PartialOrder α] : Prop :=
   ∃ F : ℕ → Set α, (∀ n, IsAntichain (· ≤ ·) (F n)) ∧ (⋃ n, F n) = Set.univ
 
 -- Logic 36: Special partial order
 
-/-- Source: Jech. -/
+/-- A partial order (α,≤) is *special* if there is a map
+f : α → ℚ that is strictly increasing, i.e.\
+x < y implies f(x) < f(y).  Note that f need not be injective:
+nothing is required of incomparable elements.
+-/
 def IsSpecial.{u} (α : Type u) [PartialOrder α] : Prop :=
   ∃ f : α → ℚ, StrictMono f
 
