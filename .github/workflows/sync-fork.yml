@@ -2,7 +2,20 @@ name: Sync fork with upstream
 
 # Keeps this fork's `main` tracking facebookresearch/atlas-lean.
 # `main` stays the default branch so visitors land on the mirror; the only
-# intended difference from upstream is this workflow file itself.
+# intended differences from upstream are this workflow file and SYNC_STATUS.md.
+#
+# 2026-10-22 revision. The previous version failed silently for ~30 hours:
+#   * Its only failure signal was `gh issue create`, but Issues are DISABLED on
+#     this fork, so the reporter itself errored and MASKED the real cause.
+#     Reporting is now done with $GITHUB_STEP_SUMMARY + ::error:: annotations,
+#     which cannot fail and need no repo features or extra permissions.
+#   * `git fetch --tags` exits non-zero when upstream force-moves a tag, which
+#     silently breaks the whole job. Now `--force`, and tags are non-fatal.
+#   * Every hourly run committed a timestamp-only change to SYNC_STATUS.md.
+#     That produced 30 junk "Update mirror sync status" commits, which got
+#     dragged into a PR by a `git rebase origin/main` and had to be
+#     force-pushed out. The status file is now committed only when the upstream
+#     SHA actually changed.
 
 on:
   schedule:
@@ -10,8 +23,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  issues: write
+  contents: write            # `issues: write` dropped - no longer creates issues
 
 concurrency:
   group: sync-fork
@@ -32,52 +44,107 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      # Branch fetch and tag fetch are SEPARATE on purpose. The branch is what the
+      # mirror needs; tags are a nicety. A clobbered upstream tag must not be able
+      # to fail the sync, which is what happened before.
       - name: Fetch upstream
         run: |
-          git remote add upstream https://github.com/facebookresearch/atlas-lean.git
-          git fetch upstream main --tags
+          set -euo pipefail
+          git remote add upstream https://github.com/facebookresearch/atlas-lean.git \
+            || git remote set-url upstream https://github.com/facebookresearch/atlas-lean.git
+          git fetch --no-tags upstream main
+          if ! git fetch --tags --force upstream; then
+            echo "::warning::upstream tag fetch failed; continuing (tags are not required to mirror main)"
+          fi
 
       - name: Measure drift before sync
         id: drift
         run: |
+          set -euo pipefail
           BEHIND=$(git rev-list --count HEAD..upstream/main)
+          AHEAD=$(git rev-list --count upstream/main..HEAD)
           UP_SHA=$(git rev-parse --short upstream/main)
-          echo "behind=$BEHIND"  >> "$GITHUB_OUTPUT"
-          echo "up_sha=$UP_SHA"  >> "$GITHUB_OUTPUT"
-          echo "Fork was $BEHIND commit(s) behind upstream ($UP_SHA)."
+          OLD_UP_SHA=""
+          if [ -f SYNC_STATUS.md ]; then
+            OLD_UP_SHA=$(sed -n 's/^- Upstream main: `\(.*\)`$/\1/p' SYNC_STATUS.md | head -1)
+          fi
+          {
+            echo "behind=$BEHIND"
+            echo "ahead=$AHEAD"
+            echo "up_sha=$UP_SHA"
+            echo "old_up_sha=$OLD_UP_SHA"
+          } >> "$GITHUB_OUTPUT"
+          echo "Fork is $BEHIND behind / $AHEAD ahead of upstream ($UP_SHA); previously recorded $OLD_UP_SHA."
 
+      # A plain merge, NOT --ff-only: this fork legitimately carries its own
+      # commits (this workflow, SYNC_STATUS.md), so main has diverged by design
+      # and a fast-forward is impossible. A conflict is reported explicitly and
+      # the merge is aborted so the next run starts from a clean tree.
       - name: Merge upstream/main into main
-        run: git merge --no-edit upstream/main
-
-      - name: Write sync status
+        id: merge
         run: |
+          set -uo pipefail
+          if git merge --no-edit upstream/main; then
+            echo "merged=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Merge conflict between this fork's main and upstream/main. Aborting the merge; the mirror will stay stale until this is resolved by hand."
+            git diff --name-only --diff-filter=U | sed 's/^/  conflicted: /'
+            git merge --abort || true
+            exit 1
+          fi
+
+      # Written only when the upstream SHA actually moved. The old version
+      # rewrote the timestamp every hour and committed it, generating noise that
+      # is painful to rebase across. TRADEOFF: "Last sync" therefore means "last
+      # sync that brought in a change", so to confirm the job is alive, look at
+      # the Actions tab rather than at this timestamp alone.
+      - name: Write sync status
+        if: steps.drift.outputs.up_sha != steps.drift.outputs.old_up_sha
+        run: |
+          set -euo pipefail
           {
             echo "# Mirror status"
             echo
             echo "This fork's \`main\` mirrors [facebookresearch/atlas-lean]"
             echo "(https://github.com/facebookresearch/atlas-lean) and is refreshed hourly."
             echo
-            echo "- Last sync: $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo "- Last sync that brought in a change: $(date -u '+%Y-%m-%d %H:%M UTC')"
             echo "- Upstream main: \`${{ steps.drift.outputs.up_sha }}\`"
             echo "- Commits behind at sync time: ${{ steps.drift.outputs.behind }}"
             echo
-            echo "If \"Last sync\" is more than a couple of hours old, treat this"
-            echo "mirror as STALE and read upstream directly."
+            echo "This file is updated only when upstream actually moves, so a slightly"
+            echo "old timestamp is normal. To check the sync is ALIVE, see the"
+            echo "\"Sync fork with upstream\" runs under the Actions tab."
           } > SYNC_STATUS.md
           git add SYNC_STATUS.md
-          git diff --cached --quiet || git commit -m "Update mirror sync status"
+          git diff --cached --quiet || git commit -m "Update mirror sync status (upstream ${{ steps.drift.outputs.up_sha }})"
 
       - name: Push
-        run: git push origin main
-
-      - name: Open an issue if the sync failed
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue create --repo "${{ github.repository }}" \
-            --title "Fork sync failed $(date -u '+%Y-%m-%d %H:%M UTC')" \
-            --body "The hourly upstream sync failed. This mirror is now STALE - read
-          facebookresearch/atlas-lean directly until it is fixed.
+          set -euo pipefail
+          if git diff --quiet origin/main HEAD; then
+            echo "Nothing to push; fork main already matches origin."
+          else
+            git push origin main
+          fi
 
-          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      # Replaces `gh issue create`, which required Issues to be ENABLED on this
+      # fork and failed with "repository has disabled issues" - hiding the real
+      # error. Writing to the step summary cannot fail and needs no permissions.
+      - name: Report outcome
+        if: always()
+        run: |
+          {
+            echo "### Fork sync - ${{ job.status }}"
+            echo
+            echo "| field | value |"
+            echo "|---|---|"
+            echo "| upstream main | \`${{ steps.drift.outputs.up_sha }}\` |"
+            echo "| previously recorded | \`${{ steps.drift.outputs.old_up_sha }}\` |"
+            echo "| commits behind | ${{ steps.drift.outputs.behind }} |"
+            echo "| commits ahead (fork-only) | ${{ steps.drift.outputs.ahead }} |"
+            echo "| merged | ${{ steps.merge.outputs.merged || 'no' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" != "success" ]; then
+            echo "::error::Fork sync FAILED. This mirror is now STALE - read facebookresearch/atlas-lean directly until it is fixed. Check which step failed in this run; the most common causes are an upstream tag clobber (fetch) and a merge conflict."
+          fi
