@@ -11,6 +11,8 @@ name: Sync fork with upstream
 #     which cannot fail and need no repo features or extra permissions.
 #   * `git fetch --tags` exits non-zero when upstream force-moves a tag, which
 #     silently breaks the whole job. Now `--force`, and tags are non-fatal.
+#   * The push used GITHUB_TOKEN, which a GitHub App restriction forbids from
+#     updating .github/workflows/ files. It now pushes with the SYNC_PAT secret.
 #   * Every hourly run committed a timestamp-only change to SYNC_STATUS.md.
 #     That produced 30 junk "Update mirror sync status" commits, which got
 #     dragged into a PR by a `git rebase origin/main` and had to be
@@ -33,11 +35,34 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      # `token:` MUST be a PAT, not the default GITHUB_TOKEN. GITHUB_TOKEN is a
+      # GitHub App credential, and GitHub refuses to let a GitHub App push changes
+      # under .github/workflows/ ("refusing to allow a GitHub App to create or
+      # update workflow ... without `workflows` permission"). Upstream edits its own
+      # workflows (e.g. codex.yml), so every sync push carries such a change and was
+      # rejected - this is what broke the sync for ~32h on 2026-10-21/22.
+      # SYNC_PAT needs: Contents = Read and write, Workflows = Read and write,
+      # scoped to this repo. persist-credentials keeps it for the later `git push`.
+      # ⚠️ PATs EXPIRE. If this job starts failing at Push with that message, check
+      # the secret's expiry first.
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
           persist-credentials: true
+          token: ${{ secrets.SYNC_PAT }}
+
+      # An absent/empty secret makes checkout fall back in confusing ways; fail
+      # immediately with a message that names the fix.
+      - name: Verify SYNC_PAT is present
+        env:
+          SYNC_PAT: ${{ secrets.SYNC_PAT }}
+        run: |
+          if [ -z "${SYNC_PAT:-}" ]; then
+            echo "::error::Secret SYNC_PAT is missing or empty. Add it under Settings > Secrets and variables > Actions with Contents and Workflows write on this repo. Without it the Push step cannot update .github/workflows/ files."
+            exit 1
+          fi
+          echo "SYNC_PAT is present (value not printed)."
 
       - name: Configure git identity
         run: |
@@ -146,5 +171,5 @@ jobs:
             echo "| merged | ${{ steps.merge.outputs.merged || 'no' }} |"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ job.status }}" != "success" ]; then
-            echo "::error::Fork sync FAILED. This mirror is now STALE - read facebookresearch/atlas-lean directly until it is fixed. Check which step failed in this run; the most common causes are an upstream tag clobber (fetch) and a merge conflict."
+            echo "::error::Fork sync FAILED. This mirror is now STALE - read facebookresearch/atlas-lean directly until it is fixed. MOST LIKELY CAUSE: the Push step was rejected with 'refusing to allow a GitHub App to create or update workflow' - that means the SYNC_PAT secret is missing, EXPIRED, or lacks 'Workflows: Read and write'. Other causes: an upstream tag clobber (fetch) or a merge conflict (see the Merge step)."
           fi
