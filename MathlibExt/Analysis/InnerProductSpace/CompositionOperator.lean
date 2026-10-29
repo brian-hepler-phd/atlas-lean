@@ -46,11 +46,13 @@ Analysis*, or Nordgren, "Composition operators", for the classical theory.
 
 * `HasBoundedFibers ψ M` : every fiber of `ψ` is finite and has at most `M`
   elements.
-* `fiberCard ψ m` : the number of preimages of `m` under `ψ`.
-* `fiberSup ψ` : the supremum of the fiber counts of `ψ`.
+* `fiberCard ψ m hfin` : the number of preimages of `m` under `ψ`, with
+  evidence that this fiber is finite.
+* `fiberSup ψ hψ` : the real supremum of the fiber counts of `ψ`, with
+  evidence of uniformly bounded finite fibers.
 * `compCLM (𝕜 := 𝕜) ψ hψ` : the composition operator as a bounded operator on
   `ℓ²(ℕ, 𝕜)`.
-* `norm_compCLM` : `‖C_ψ‖ = √(fiberSup ψ)`.
+* `norm_compCLM` : `‖C_ψ‖ = √(fiberSup ψ hψ)`.
 * `adjoint_compCLM_apply` : `((C_ψ)† y) m = ∑_{n ∈ ψ⁻¹'{m}} y n`.
 * `compCLM_comp` : `C_φ ∘L C_ψ = C_{ψ ∘ φ}`.
 * `compCLM_mem_unitary` : a permutation symbol gives a unitary operator.
@@ -74,11 +76,25 @@ composition operator. -/
 def HasBoundedFibers (ψ : ℕ → ℕ) (M : ℕ) : Prop :=
   ∀ m, (ψ ⁻¹' {m}).Finite ∧ (ψ ⁻¹' {m}).ncard ≤ M
 
-/-- The number of preimages of `m` under `ψ`. -/
-noncomputable def fiberCard (ψ : ℕ → ℕ) (m : ℕ) : ℕ := (ψ ⁻¹' {m}).ncard
+/-- The number of preimages of `m` under `ψ`, defined for a finite fiber. -/
+noncomputable def fiberCard (ψ : ℕ → ℕ) (m : ℕ) (hfin : (ψ ⁻¹' {m}).Finite) : ℕ :=
+  hfin.toFinset.card
 
-/-- The supremum of the fiber counts of `ψ`. -/
-noncomputable def fiberSup (ψ : ℕ → ℕ) : ℝ := ⨆ m, ((ψ ⁻¹' {m}).ncard : ℝ)
+/-- On its finite domain, the fiber count agrees with the standard natural cardinality. -/
+@[simp] theorem fiberCard_eq_ncard (ψ : ℕ → ℕ) (m : ℕ) (hfin : (ψ ⁻¹' {m}).Finite) :
+    fiberCard ψ m hfin = (ψ ⁻¹' {m}).ncard :=
+  (Set.ncard_eq_toFinset_card _ hfin).symm
+
+/-- The real supremum of the fiber counts of `ψ`, defined for uniformly bounded finite
+fibers. The bound in `hψ` ensures that the real-valued family is bounded above. -/
+noncomputable def fiberSup (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M) : ℝ :=
+  ⨆ m, (fiberCard ψ m (hψ m).1 : ℝ)
+
+/-- On its bounded finite domain, the fiber supremum agrees with the supremum of natural
+cardinalities. Its value is independent of the chosen bound and evidence. -/
+theorem fiberSup_eq_iSup (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M) :
+    fiberSup ψ hψ = ⨆ m, ((ψ ⁻¹' {m}).ncard : ℝ) := by
+  simp only [fiberSup, fiberCard_eq_ncard]
 
 /-- The composition function: precompose a sequence with `ψ`. -/
 def compFun (ψ : ℕ → ℕ) (x : ℕ → 𝕜) (n : ℕ) : 𝕜 := x (ψ n)
@@ -136,14 +152,15 @@ theorem memℓp_compFun (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ 
   exact sum_finset_compFun_norm_sq_le ψ (fun m => (hψ m).1)
     (fun m => Nat.cast_le.mpr (hψ m).2) x s
 
-/-- The squared-norm sum of the composed sequence is at most `fiberSup ψ`
+/-- The squared-norm sum of the composed sequence is at most `fiberSup ψ hψ`
 times the squared-norm sum of the original sequence. -/
 theorem tsum_compFun_norm_sq_le (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M)
     (x : ℓ²(ℕ, 𝕜)) :
     ∑' n, ‖(x : ℕ → 𝕜) (ψ n)‖ ^ (2 : ℝ)
-      ≤ fiberSup ψ * ∑' m, ‖(x : ℕ → 𝕜) m‖ ^ (2 : ℝ) := by
-  have hB : ∀ m, ((ψ ⁻¹' {m}).ncard : ℝ) ≤ fiberSup ψ := by
+      ≤ fiberSup ψ hψ * ∑' m, ‖(x : ℕ → 𝕜) m‖ ^ (2 : ℝ) := by
+  have hB : ∀ m, ((ψ ⁻¹' {m}).ncard : ℝ) ≤ fiberSup ψ hψ := by
     intro m
+    rw [fiberSup_eq_iSup]
     apply le_ciSup _ m
     exact ⟨(M : ℝ), fun _ ⟨k, hk⟩ => hk ▸ Nat.cast_le.mpr (hψ k).2⟩
   exact Real.tsum_le_of_sum_le (fun n => Real.rpow_nonneg (norm_nonneg _) _)
@@ -167,10 +184,10 @@ theorem compLinMap_apply (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ
     (x : ℓ²(ℕ, 𝕜)) (i : ℕ) : compLinMap ψ hψ x i = (x : ℕ → 𝕜) (ψ i) :=
   rfl
 
-/-- The squared norm of `C_ψ x` is at most `fiberSup ψ * ‖x‖²`. -/
+/-- The squared norm of `C_ψ x` is at most `fiberSup ψ hψ * ‖x‖²`. -/
 theorem norm_sq_compLinMap_apply_le (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M)
     (x : ℓ²(ℕ, 𝕜)) :
-    ‖compLinMap ψ hψ x‖ ^ (2 : ℝ) ≤ fiberSup ψ * ‖x‖ ^ (2 : ℝ) := by
+    ‖compLinMap ψ hψ x‖ ^ (2 : ℝ) ≤ fiberSup ψ hψ * ‖x‖ ^ (2 : ℝ) := by
   have h2 : (2 : ℝ≥0∞).toReal = (2 : ℝ) := by simp
   have htsum_x : ∑' m, ‖(x : ℕ → 𝕜) m‖ ^ (2 : ℝ) = ‖x‖ ^ (2 : ℝ) := by
     have h := lp.norm_rpow_eq_tsum (by simp : (0 : ℝ) < (2 : ℝ≥0∞).toReal) x
@@ -188,29 +205,30 @@ theorem norm_sq_compLinMap_apply_le (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBound
   rw [htsum_c, ← htsum_x]
   exact tsum_compFun_norm_sq_le ψ hψ x
 
-/-- `fiberSup ψ` is nonnegative. -/
+/-- `fiberSup ψ hψ` is nonnegative. -/
 theorem fiberSup_nonneg (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M) :
-    0 ≤ fiberSup ψ :=
-  le_trans (Nat.cast_nonneg _)
+    0 ≤ fiberSup ψ hψ := by
+  rw [fiberSup_eq_iSup]
+  exact le_trans (Nat.cast_nonneg _)
     (le_ciSup ⟨(M : ℝ), fun _ ⟨k, hk⟩ => hk ▸ Nat.cast_le.mpr (hψ k).2⟩ 0)
 
-/-- The composition operator is bounded by `√(fiberSup ψ)`. -/
+/-- The composition operator is bounded by `√(fiberSup ψ hψ)`. -/
 theorem norm_compLinMap_apply_le (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M)
     (x : ℓ²(ℕ, 𝕜)) :
-    ‖compLinMap ψ hψ x‖ ≤ Real.sqrt (fiberSup ψ) * ‖x‖ := by
-  have hS : 0 ≤ fiberSup ψ := fiberSup_nonneg ψ hψ
+    ‖compLinMap ψ hψ x‖ ≤ Real.sqrt (fiberSup ψ hψ) * ‖x‖ := by
+  have hS : 0 ≤ fiberSup ψ hψ := fiberSup_nonneg ψ hψ
   have h := norm_sq_compLinMap_apply_le ψ hψ x
   rw [Real.rpow_two, Real.rpow_two] at h
   calc ‖compLinMap ψ hψ x‖ = Real.sqrt (‖compLinMap ψ hψ x‖ ^ 2) :=
         (Real.sqrt_sq (norm_nonneg _)).symm
-    _ ≤ Real.sqrt (fiberSup ψ * ‖x‖ ^ 2) := Real.sqrt_le_sqrt h
-    _ = Real.sqrt (fiberSup ψ) * ‖x‖ := by
+    _ ≤ Real.sqrt (fiberSup ψ hψ * ‖x‖ ^ 2) := Real.sqrt_le_sqrt h
+    _ = Real.sqrt (fiberSup ψ hψ) * ‖x‖ := by
         rw [Real.sqrt_mul hS, Real.sqrt_sq (norm_nonneg _)]
 
 /-- The composition operator as a bounded operator on `ℓ²(ℕ, 𝕜)`. -/
 noncomputable def compCLM (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M) :
     ℓ²(ℕ, 𝕜) →L[𝕜] ℓ²(ℕ, 𝕜) :=
-  (compLinMap ψ hψ).mkContinuous (Real.sqrt (fiberSup ψ))
+  (compLinMap ψ hψ).mkContinuous (Real.sqrt (fiberSup ψ hψ))
     (norm_compLinMap_apply_le ψ hψ)
 
 /-- Pointwise action of the composition operator. -/
@@ -218,27 +236,29 @@ theorem compCLM_apply (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M)
     (x : ℓ²(ℕ, 𝕜)) (i : ℕ) : compCLM (𝕜 := 𝕜) ψ hψ x i = (x : ℕ → 𝕜) (ψ i) :=
   rfl
 
-/-- The composition operator is bounded by `√(fiberSup ψ)` on every vector. -/
+/-- The composition operator is bounded by `√(fiberSup ψ hψ)` on every vector. -/
 theorem norm_compCLM_apply_le (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M)
     (x : ℓ²(ℕ, 𝕜)) :
-    ‖compCLM (𝕜 := 𝕜) ψ hψ x‖ ≤ Real.sqrt (fiberSup ψ) * ‖x‖ :=
+    ‖compCLM (𝕜 := 𝕜) ψ hψ x‖ ≤ Real.sqrt (fiberSup ψ hψ) * ‖x‖ :=
   norm_compLinMap_apply_le ψ hψ x
 
-/-- The operator norm of `C_ψ` is at most `√(fiberSup ψ)`. -/
+/-- The operator norm of `C_ψ` is at most `√(fiberSup ψ hψ)`. -/
 theorem norm_compCLM_le (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M) :
-    ‖compCLM (𝕜 := 𝕜) ψ hψ‖ ≤ Real.sqrt (fiberSup ψ) := by
-  show ‖(compLinMap ψ hψ).mkContinuous (Real.sqrt (fiberSup ψ))
-      (norm_compLinMap_apply_le ψ hψ)‖ ≤ Real.sqrt (fiberSup ψ)
+    ‖compCLM (𝕜 := 𝕜) ψ hψ‖ ≤ Real.sqrt (fiberSup ψ hψ) := by
+  show ‖(compLinMap ψ hψ).mkContinuous (Real.sqrt (fiberSup ψ hψ))
+      (norm_compLinMap_apply_le ψ hψ)‖ ≤ Real.sqrt (fiberSup ψ hψ)
   exact LinearMap.mkContinuous_norm_le _ (Real.sqrt_nonneg _)
     (norm_compLinMap_apply_le ψ hψ)
 
 /-- The norm of `C_ψ` applied to a standard basis vector is the square root
 of the corresponding fiber count. -/
 theorem norm_compCLM_single (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M) (m : ℕ) :
-    ‖compCLM (𝕜 := 𝕜) ψ hψ (lp.single 2 m (1 : 𝕜))‖ = Real.sqrt ((fiberCard ψ m : ℝ)) := by
+    ‖compCLM (𝕜 := 𝕜) ψ hψ (lp.single 2 m (1 : 𝕜))‖ =
+      Real.sqrt (fiberCard ψ m (hψ m).1 : ℝ) := by
   have h2 : (2 : ℝ≥0∞).toReal = (2 : ℝ) := by simp
   have htsum : ‖compCLM (𝕜 := 𝕜) ψ hψ (lp.single 2 m (1 : 𝕜))‖ ^ (2 : ℝ)
-      = (fiberCard ψ m : ℝ) := by
+      = (fiberCard ψ m (hψ m).1 : ℝ) := by
+    rw [fiberCard_eq_ncard]
     have h := lp.norm_rpow_eq_tsum (by simp : (0 : ℝ) < (2 : ℝ≥0∞).toReal)
       (compCLM (𝕜 := 𝕜) ψ hψ (lp.single 2 m (1 : 𝕜)))
     rw [h2] at h
@@ -269,20 +289,20 @@ theorem norm_compCLM_single (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers
       simp [hnm]
     rw [Finset.sum_congr rfl hsum, Finset.sum_const, nsmul_eq_mul, mul_one]
     rw [← Set.ncard_eq_toFinset_card _ (hψ m).1]
-    rfl
   rw [Real.rpow_two] at htsum
   rw [← htsum, Real.sqrt_sq (norm_nonneg _)]
 
 /-- The operator norm of the composition operator:
-`‖C_ψ‖ = √(fiberSup ψ)`, the square root of the largest fiber count. -/
+`‖C_ψ‖ = √(fiberSup ψ hψ)`, the square root of the largest fiber count. -/
 theorem norm_compCLM (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M) :
-    ‖compCLM (𝕜 := 𝕜) ψ hψ‖ = Real.sqrt (fiberSup ψ) := by
+    ‖compCLM (𝕜 := 𝕜) ψ hψ‖ = Real.sqrt (fiberSup ψ hψ) := by
   apply le_antisymm (norm_compCLM_le (𝕜 := 𝕜) ψ hψ)
   have hnn : 0 ≤ ‖compCLM (𝕜 := 𝕜) ψ hψ‖ := norm_nonneg _
-  have hle : fiberSup ψ ≤ ‖compCLM (𝕜 := 𝕜) ψ hψ‖ ^ 2 := by
+  have hle : fiberSup ψ hψ ≤ ‖compCLM (𝕜 := 𝕜) ψ hψ‖ ^ 2 := by
+    rw [fiberSup_eq_iSup]
     apply ciSup_le
     intro m
-    have h1 : Real.sqrt ((fiberCard ψ m : ℝ)) ≤ ‖compCLM (𝕜 := 𝕜) ψ hψ‖ := by
+    have h1 : Real.sqrt (fiberCard ψ m (hψ m).1 : ℝ) ≤ ‖compCLM (𝕜 := 𝕜) ψ hψ‖ := by
       rw [← norm_compCLM_single (𝕜 := 𝕜) ψ hψ m]
       calc ‖compCLM (𝕜 := 𝕜) ψ hψ (lp.single 2 m (1 : 𝕜))‖
           ≤ ‖compCLM (𝕜 := 𝕜) ψ hψ‖ * ‖(lp.single 2 m (1 : 𝕜) : ℓ²(ℕ, 𝕜))‖ :=
@@ -292,10 +312,12 @@ theorem norm_compCLM (ψ : ℕ → ℕ) {M : ℕ} (hψ : HasBoundedFibers ψ M) 
               rw [lp.norm_single (E := fun _ : ℕ => 𝕜) (p := 2) (by simp) m (1 : 𝕜),
                 norm_one]
             rw [hnorm1, mul_one]
-    have h3 : Real.sqrt ((fiberCard ψ m : ℝ)) ≤ Real.sqrt (‖compCLM (𝕜 := 𝕜) ψ hψ‖ ^ 2) := by
+    have h3 : Real.sqrt (fiberCard ψ m (hψ m).1 : ℝ) ≤
+        Real.sqrt (‖compCLM (𝕜 := 𝕜) ψ hψ‖ ^ 2) := by
       rwa [Real.sqrt_sq hnn]
+    rw [fiberCard_eq_ncard] at h3
     exact (Real.sqrt_le_sqrt_iff (sq_nonneg _)).mp h3
-  calc Real.sqrt (fiberSup ψ) ≤ Real.sqrt (‖compCLM (𝕜 := 𝕜) ψ hψ‖ ^ 2) :=
+  calc Real.sqrt (fiberSup ψ hψ) ≤ Real.sqrt (‖compCLM (𝕜 := 𝕜) ψ hψ‖ ^ 2) :=
         Real.sqrt_le_sqrt hle
     _ = ‖compCLM (𝕜 := 𝕜) ψ hψ‖ := Real.sqrt_sq hnn
 
@@ -647,9 +669,10 @@ theorem not_isCompactOperator_compCLM (ψ : ℕ → ℕ) {M : ℕ}
           ‖((v (N + 1) - v N) : ℓ²(ℕ, 𝕜)) n‖ ^ (2 : ℝ)
           = (((Set.Finite.toFinset ((hψ A).1.union (hψ B).1)).card : ℝ)) := by
         rw [Finset.sum_congr rfl hterm, Finset.sum_const, nsmul_eq_mul, mul_one]
-      have hnc : (ψ ⁻¹' {A} ∪ ψ ⁻¹' {B}).ncard = fiberCard ψ A + fiberCard ψ B := by
+      have hnc : (ψ ⁻¹' {A} ∪ ψ ⁻¹' {B}).ncard =
+          fiberCard ψ A (hψ A).1 + fiberCard ψ B (hψ B).1 := by
         rw [Set.ncard_union_eq _ (hψ A).1 (hψ B).1]
-        · rfl
+        · simp only [fiberCard_eq_ncard]
         · rw [Set.disjoint_left]
           intro x hx hx2
           simp only [Set.mem_preimage, Set.mem_singleton_iff] at hx hx2
@@ -657,13 +680,15 @@ theorem not_isCompactOperator_compCLM (ψ : ℕ → ℕ) {M : ℕ}
       have hcard_eq : (Set.Finite.toFinset ((hψ A).1.union (hψ B).1)).card
           = (ψ ⁻¹' {A} ∪ ψ ⁻¹' {B}).ncard :=
         (Set.ncard_eq_toFinset_card _ _).symm
-      have hA1 : (1 : ℝ) ≤ (fiberCard ψ A : ℝ) := by
+      have hA1 : (1 : ℝ) ≤ (fiberCard ψ A (hψ A).1 : ℝ) := by
+        rw [fiberCard_eq_ncard]
         obtain ⟨n, hn⟩ := hmseq_mem (φ (N + 1))
         have hne : (ψ ⁻¹' {A}).Nonempty := ⟨n, hn.trans hA.symm⟩
         have hpos : 0 < (ψ ⁻¹' {A}).ncard :=
           Set.Nonempty.ncard_pos (hψ A).1 hne
         exact Nat.one_le_cast.mpr hpos
-      have hB1 : (1 : ℝ) ≤ (fiberCard ψ B : ℝ) := by
+      have hB1 : (1 : ℝ) ≤ (fiberCard ψ B (hψ B).1 : ℝ) := by
+        rw [fiberCard_eq_ncard]
         obtain ⟨n, hn⟩ := hmseq_mem (φ N)
         have hne : (ψ ⁻¹' {B}).Nonempty := ⟨n, hn.trans hB.symm⟩
         have hpos : 0 < (ψ ⁻¹' {B}).ncard :=

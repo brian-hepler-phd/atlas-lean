@@ -166,7 +166,9 @@ private theorem fiberSup_double : fiberSup (fun n => 2 * n) hasBoundedFibers_dou
     simpa only [fiberCard_eq_ncard, Nat.cast_one] using
       (Nat.cast_le.mpr (hasBoundedFibers_double m).2 :
         (((fun n => 2 * n) ⁻¹' {m}).ncard : ℝ) ≤ (1 : ℕ))
-  · simpa only [fiberCard_double_even, Nat.cast_one] using le_ciSup hB 0
+  · have h0 : fiberCard (fun n => 2 * n) 0 (hasBoundedFibers_double 0).1 = 1 :=
+      fiberCard_double_even 0
+    simpa only [h0, Nat.cast_one] using le_ciSup hB 0
 
 /-- The doubling composition operator has its original quantitative norm one. -/
 example : ‖compCLM (𝕜 := ℂ) (fun n => 2 * n) hasBoundedFibers_double‖ = 1 := by

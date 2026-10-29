@@ -45,17 +45,18 @@ theorem hasBoundedFibers_double : HasBoundedFibers (fun n => 2 * n) 1 :=
   hasBoundedFibers_of_injective (fun a b h => by omega)
 
 /-- The fiber counts of the identity symbol are all `1`, so its supremum is `1`. -/
-theorem fiberSup_id : fiberSup (id : ℕ → ℕ) = 1 := by
+theorem fiberSup_id :
+    fiberSup (id : ℕ → ℕ) (hasBoundedFibers_of_injective Function.injective_id) = 1 := by
   have h : ∀ m : ℕ, (((id : ℕ → ℕ) ⁻¹' {m}).ncard : ℝ) = 1 := by
     intro m
     rw [Set.preimage_id, Set.ncard_singleton]
     norm_cast
   unfold fiberSup
-  simp only [h]
+  simp only [fiberCard_eq_ncard, h]
   exact ciSup_const
 
 /-- The fiber counts of the halving symbol are all `2`, so its supremum is `2`. -/
-theorem fiberSup_div_two : fiberSup (fun n => n / 2) = 2 := by
+theorem fiberSup_div_two : fiberSup (fun n => n / 2) hasBoundedFibers_div_two = 2 := by
   have h : ∀ m : ℕ, (((fun n => n / 2) ⁻¹' {m}).ncard : ℝ) = 2 := by
     intro m
     have hset : (fun n => n / 2) ⁻¹' {m} = {2 * m, 2 * m + 1} := by
@@ -66,7 +67,7 @@ theorem fiberSup_div_two : fiberSup (fun n => n / 2) = 2 := by
     rw [hset, Set.ncard_pair (by omega : 2 * m ≠ 2 * m + 1)]
     norm_cast
   unfold fiberSup
-  simp only [h]
+  simp only [fiberCard_eq_ncard, h]
   exact ciSup_const
 
 /-- The identity symbol gives the identity operator. -/
