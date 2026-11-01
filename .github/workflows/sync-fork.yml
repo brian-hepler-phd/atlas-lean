@@ -45,7 +45,7 @@ jobs:
       # scoped to this repo. persist-credentials keeps it for the later `git push`.
       # ⚠️ PATs EXPIRE. If this job starts failing at Push with that message, check
       # the secret's expiry first.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
