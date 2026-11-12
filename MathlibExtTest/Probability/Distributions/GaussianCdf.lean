@@ -12,6 +12,7 @@ public import MathlibExt.Probability.Distributions.GaussianCdf
 public import Mathlib.MeasureTheory.Measure.Dirac.Basic
 public import Mathlib.MeasureTheory.Measure.Dirac.Def
 public import Mathlib.MeasureTheory.Measure.Real
+public import MathlibExt.Probability.CdfContinuityPoints
 
 /-!
 # Tests for continuity of the Gaussian cdf
@@ -140,5 +141,61 @@ example :
   rw [h1, hIoi] at htot
   rw [cdf_eq_real]
   linarith
+
+/-- Use: symmetry at `x = 1` in both directions. -/
+example : cdf (gaussianReal 0 1) (-1) + cdf (gaussianReal 0 1) 1 = 1 := by
+  rw [cdf_gaussianReal_neg]
+  ring
+
+/-- Boundary: at `x = 1` the cdf is strictly above `1 / 2`, so the identity is not vacuous. -/
+example : cdf (gaussianReal 0 1) 0 < cdf (gaussianReal 0 1) 1 := by
+  have hIoc := MathlibExt.Probability.CdfContinuityPoints.measure_Ioc_eq_ofReal_cdf
+    (gaussianReal 0 1) 0 1
+  have hvol : volume (Set.Ioc (0 : ℝ) 1) ≠ 0 := by
+    rw [Real.volume_Ioc]
+    simp
+  have hac : volume ≪ gaussianReal (0 : ℝ) 1 :=
+    gaussianReal_absolutelyContinuous' 0 one_ne_zero
+  have hne : (gaussianReal 0 1) (Set.Ioc 0 1) ≠ 0 := fun h => hvol (hac h)
+  have hpos : 0 < (gaussianReal 0 1) (Set.Ioc 0 1) := pos_iff_ne_zero.mpr hne
+  rw [hIoc] at hpos
+  rw [ENNReal.ofReal_pos] at hpos
+  linarith
+
+/-- Use: the standard normal cdf strictly increases from `0` to `1`. -/
+example : cdf (gaussianReal 0 1) 0 < cdf (gaussianReal 0 1) 1 := by
+  exact strictMono_cdf_gaussianReal 0 one_ne_zero zero_lt_one
+
+/-- Counterexample: the Dirac cdf is flat at `1` on `[0, ∞)`, not strictly monotone. -/
+example : ¬ StrictMono (cdf (Measure.dirac (0 : ℝ))) := by
+  intro h
+  have h01 := h (zero_lt_one : (0 : ℝ) < 1)
+  have e0 : cdf (Measure.dirac (0 : ℝ)) 0 = 1 := by
+    rw [cdf_eq_real, measureReal_def,
+      Measure.dirac_apply_of_mem (Set.mem_Iic.mpr (le_refl 0)), ENNReal.toReal_one]
+  have e1 : cdf (Measure.dirac (0 : ℝ)) 1 = 1 := by
+    rw [cdf_eq_real, measureReal_def,
+      Measure.dirac_apply_of_mem (Set.mem_Iic.mpr zero_le_one), ENNReal.toReal_one]
+  rw [e0, e1] at h01
+  exact (lt_irrefl _ h01).elim
+
+/-- Use: strict monotonicity implies plain monotonicity (apply `StrictMono.monotone`
+to the main theorem at `μ = 0`, `v = 1`). -/
+example : Monotone (cdf (gaussianReal 0 1)) := by
+  exact (strictMono_cdf_gaussianReal 0 one_ne_zero).monotone
+
+/-- Use: the 95th percentile of the standard normal is positive. -/
+example : 0 < cdfQuantile (gaussianReal 0 1) 0.95 := by
+  exact cdfQuantile_gaussianReal_pos ⟨by norm_num, by norm_num⟩
+
+/-- Use: every upper-tail critical value for levels below one half is positive. -/
+example {α : ℝ} (hα : α ∈ Set.Ioo 0 (1 / 2)) :
+    0 < cdfQuantile (gaussianReal 0 1) (1 - α) := by
+  exact cdfQuantile_gaussianReal_pos ⟨by linarith [hα.1, hα.2], by linarith [hα.1]⟩
+
+/-- Boundary: at `u = 1 / 2` the quantile is not positive, so the open bound is necessary. -/
+example : cdfQuantile (gaussianReal 0 1) (1 / 2) ≤ 0 := by
+  have hmem : (1 / 2 : ℝ) ∈ Set.Ioo (0 : ℝ) 1 := ⟨by norm_num, by norm_num⟩
+  exact (cdfQuantile_le_iff (gaussianReal 0 1) hmem).mpr cdf_gaussianReal_zero.ge
 
 end MathlibExt.Probability.GaussianCdf
