@@ -60,6 +60,31 @@ theorem wassersteinDist_le_cost (p : ℝ) {B C : Barcode} (M : Matching B C) :
   unfold wassersteinDist
   exact sInf_le ⟨M, le_rfl⟩
 
+-- Topology 744: Erosion Distance between Barcodes
+
+theorem erosionDist_le_ofReal {B C : Barcode} {ε : ℝ} {hε : 0 ≤ ε}
+    (h : ErosionCondition B C ε) :
+    erosionDist B C ≤ ENNReal.ofReal ε :=
+  sInf_le ⟨ε, hε, h, le_rfl⟩
+
+-- Topology 745: Persistence Landscapes
+
+theorem persistenceLandscape_empty (p k : ℕ) (t : ℝ) :
+    persistenceLandscape ∅ p k t = 0 := by
+  by_cases hk : k = 0
+  · simp [persistenceLandscape, hk]
+  · have hpos : 0 < k := Nat.pos_of_ne_zero hk
+    simp [persistenceLandscape, hk, hpos]
+
+-- Topology 766: Frechet Mean of Finite Set of Barcodes
+
+/- Any barcode is a frechet mean of the empty set -/
+
+theorem isFrechetMean_empty (p : ℝ) (B : Barcode) :
+    IsFrechetMean ∅ p B := by
+  intro B'
+  simp [frechetObjective]
+
 end MathlibExtTest.AlgebraicTopology.Barcodes.Basic
 
 end
