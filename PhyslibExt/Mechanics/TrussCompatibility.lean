@@ -8,9 +8,12 @@ LICENSE file in the root directory of this source tree.
 module
 
 public import PhyslibExt.Mechanics.HarmonicMechanics
+public import PhyslibExt.Statistics.UncertaintyPropagation
 import MathlibExt.LinearAlgebra.Matrix.WeightedScatter
 import Mathlib.Algebra.Order.Star.Real
 import Mathlib.LinearAlgebra.Matrix.PosDef
+import Mathlib.LinearAlgebra.Matrix.Symmetric
+import MathlibExt.LinearAlgebra.Matrix.FullRankLinearSystem
 
 /-!
 # Axial compatibility on the finite member table
@@ -43,6 +46,16 @@ needs distinct endpoints. The rigidity certificate
 positive member weights, by the absence of
 generalized-coordinate null modes of the supported
 compatibility map.
+Section F turns positive definiteness into the unique
+supported response to a load, with the explicit inverse
+form and the unique residual reaction vector for a full
+joint load.
+Section G records reciprocal work: one symmetric supported
+stiffness gives equal cross work for any two supported load
+cases.
+Section H builds the load-parameter observation matrix at
+fixed supported stiffness and records when load parameters
+on a declared affine space are identifiable from it.
 
 ## ii. Key results
 
@@ -61,6 +74,17 @@ compatibility map.
   supported stiffness is positive definite iff the supported
   compatibility map has trivial kernel (no
   generalized-coordinate null mode).
+- `supported_existsUnique` and
+  `supported_residual_existsUnique_of_posDef`: the unique
+  supported displacement and residual reaction vector.
+- `supported_reciprocalWork`: for one supported
+  stiffness, the work of either supported load through the
+  other solution is the same.
+- `loadObservationMatrix` and
+  `loadObservation_identifiableOnAffine_of_kernels`: at
+  fixed positive-definite supported stiffness, load
+  parameters on an affine space are identifiable when the
+  sensor map and the load basis have trivial kernels there.
 
 ## iii. Table of contents
 
@@ -69,6 +93,9 @@ compatibility map.
 - C. Supported quadratic form
 - D. Supported virtual work
 - E. Supported rigidity certificate
+- F. Supported unique response
+- G. Reciprocal work
+- H. Load-parameter identifiability
 
 ## iv. References
 
@@ -365,5 +392,367 @@ theorem supported_posDef_iff_of_axial {J M F : Type*} [Fintype J]
     div_pos (mul_pos (hE e) (hA e))
       (pow_pos (memberLength_pos_of_ne r a b (hne e)) 3)
   exact supported_posDef_iff r a b S _ hk
+
+/-! ## F. Supported unique response -/
+
+/-- Reduced/full coordinate commute: the supported stiffness is the
+full stiffness restricted by the support map, `Sᵀ * K * S`. No
+positivity hypothesis is used. -/
+theorem supported_stiffness_eq {J M F : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M]
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) F ℝ) (k : M → ℝ) :
+    (axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)
+      = Sᵀ * ((axialCompatibility r a b)ᵀ * Matrix.diagonal k
+          * axialCompatibility r a b) * S := by
+  rw [Matrix.transpose_mul]
+  simp only [Matrix.mul_assoc]
+
+/-- Unique supported response: for positive-definite supported
+stiffness, every supported load `f` has exactly one supported
+displacement `u` in the supported coordinates `F`. -/
+theorem supported_existsUnique_of_posDef {J M F : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M] [Fintype F]
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) F ℝ) (k : M → ℝ)
+    (hPD : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)).PosDef)
+    (f : F → ℝ) :
+    ∃! u : F → ℝ, ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)) *ᵥ u = f := by
+  classical
+  exact Matrix.exists_unique_mulVec_eq
+    (Matrix.mulVec_injective_of_isUnit hPD.isUnit) f
+
+/-- Explicit supported response: for positive-definite supported
+stiffness, `u` solves the supported system exactly when it is the
+inverse applied to the load, `u = K⁻¹ *ᵥ f`. -/
+theorem supported_mulVec_eq_iff_inv_mulVec {J M F : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M] [Fintype F] [DecidableEq F]
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) F ℝ) (k : M → ℝ)
+    (hPD : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)).PosDef)
+    {f u : F → ℝ} :
+    ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)) *ᵥ u = f ↔
+      u = ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S))⁻¹ *ᵥ f := by
+  have hU : IsUnit (((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+      * (axialCompatibility r a b * S))).det :=
+    isUnit_iff_ne_zero.mpr (ne_of_gt hPD.det_pos)
+  exact Matrix.mulVec_eq_iff_inv_mulVec hU
+
+/-- Certified unique supported response: for positive member
+weights `k` and trivial supported kernel (no supported null mode),
+every supported load has exactly one supported displacement,
+through the supported rigidity certificate
+`supported_posDef_iff`. -/
+theorem supported_existsUnique {J M F : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M] [Fintype F]
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) F ℝ) (k : M → ℝ) (hk : ∀ e, 0 < k e)
+    (hker : ∀ u : F → ℝ, (axialCompatibility r a b * S) *ᵥ u = 0 → u = 0)
+    (f : F → ℝ) :
+    ∃! u : F → ℝ, ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)) *ᵥ u = f := by
+  have hPD : (((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+      * (axialCompatibility r a b * S))).PosDef :=
+    (supported_posDef_iff r a b S k hk).mpr hker
+  exact supported_existsUnique_of_posDef r a b S k hPD f
+
+/-- Unique residual reaction vector: for positive-definite
+supported stiffness and a full joint load `g`, there is exactly one
+pair of a supported displacement `p.1` and a full joint-coordinate
+residual `p.2` with full balance `K *ᵥ (S *ᵥ p.1) = g + p.2` and
+vanishing supported projection `Sᵀ *ᵥ p.2 = 0`. The residual is the
+vector `K *ᵥ (S *ᵥ p.1) - g`; no expansion in a reaction basis and
+no uniqueness of such coefficients is stated. -/
+theorem supported_residual_existsUnique_of_posDef {J M F : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M] [Fintype F]
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) F ℝ) (k : M → ℝ)
+    (hPD : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)).PosDef)
+    (g : J × Fin 2 → ℝ) :
+    ∃! p : (F → ℝ) × (J × Fin 2 → ℝ),
+      ((axialCompatibility r a b)ᵀ * Matrix.diagonal k
+          * axialCompatibility r a b) *ᵥ (S *ᵥ p.1) = g + p.2
+        ∧ Sᵀ *ᵥ p.2 = 0 := by
+  have hKs : (axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)
+      = Sᵀ * ((axialCompatibility r a b)ᵀ * Matrix.diagonal k
+          * axialCompatibility r a b) * S :=
+    supported_stiffness_eq r a b S k
+  have hcomm : ∀ u : F → ℝ,
+      ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+          * (axialCompatibility r a b * S)) *ᵥ u
+        = Sᵀ *ᵥ (((axialCompatibility r a b)ᵀ * Matrix.diagonal k
+            * axialCompatibility r a b) *ᵥ (S *ᵥ u)) := by
+    intro u
+    rw [hKs, ← Matrix.mulVec_mulVec, ← Matrix.mulVec_mulVec]
+  obtain ⟨u, hu, huniq⟩ :=
+    supported_existsUnique_of_posDef r a b S k hPD (Sᵀ *ᵥ g)
+  refine ⟨(u, ((axialCompatibility r a b)ᵀ * Matrix.diagonal k
+      * axialCompatibility r a b) *ᵥ (S *ᵥ u) - g), ?_, ?_⟩
+  · refine ⟨?_, ?_⟩
+    · dsimp only
+      exact (add_sub_cancel _ _).symm
+    · dsimp only
+      rw [Matrix.mulVec_sub, ← hcomm u, hu, sub_self]
+  · rintro ⟨u', r'⟩ ⟨h1', h2'⟩
+    dsimp only at h1' h2' ⊢
+    have hSu : Sᵀ *ᵥ (((axialCompatibility r a b)ᵀ * Matrix.diagonal k
+          * axialCompatibility r a b) *ᵥ (S *ᵥ u')) = Sᵀ *ᵥ g := by
+      rw [h1', Matrix.mulVec_add, h2', add_zero]
+    have hKsu' : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+          * (axialCompatibility r a b * S)) *ᵥ u' = Sᵀ *ᵥ g := by
+      rw [hcomm u', hSu]
+    have huv : u' = u := huniq _ hKsu'
+    have hr : r' = ((axialCompatibility r a b)ᵀ * Matrix.diagonal k
+          * axialCompatibility r a b) *ᵥ (S *ᵥ u') - g := by
+      rw [h1']; abel
+    subst huv
+    rw [hr]
+
+/-- Null modes are rejected: a nonzero supported displacement `z`
+with no member stretch (`(B S) *ᵥ z = 0`) rules out a unique
+supported response for every supported load, for arbitrary weights
+`k`. In particular an unsupported rigid mode or a supported
+mechanism admits no such unique response. -/
+theorem supported_not_existsUnique_of_kernel {J M F : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M] [Fintype F]
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) F ℝ) (k : M → ℝ)
+    {z : F → ℝ} (hz : z ≠ 0)
+    (hBz : (axialCompatibility r a b * S) *ᵥ z = 0) (f : F → ℝ) :
+    ¬ ∃! u : F → ℝ, ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)) *ᵥ u = f := by
+  rintro ⟨u, hu, huniq⟩
+  have hKz : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+      * (axialCompatibility r a b * S)) *ᵥ z = 0 := by
+    rw [← Matrix.mulVec_mulVec, hBz, Matrix.mulVec_zero]
+  have h2 : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+      * (axialCompatibility r a b * S)) *ᵥ (u + z) = f := by
+    rw [Matrix.mulVec_add, hu, hKz, add_zero]
+  have hEq : u + z = u := huniq _ h2
+  have hz0 : z = 0 := add_left_cancel_iff.mp (by rwa [add_zero])
+  exact hz hz0
+
+/-- Physical unique response: separation rows with weights
+`E A / L ^ 3`, positive `E` and `A`, noncoincident endpoint
+positions (`r (a e) ≠ r (b e)`, the model admission `L > 0`) and
+trivial supported kernel give a unique supported displacement for
+every supported load and a unique displacement/residual pair for
+every full joint load, through the physical supported
+rigidity certificate `supported_posDef_iff_of_axial`. -/
+theorem supported_response_of_axial {J M F : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M] [Fintype F]
+    (r : J → (Fin 2 → ℝ)) (a b : M → J) (S : Matrix (J × Fin 2) F ℝ)
+    {E A : M → ℝ} (hE : ∀ e, 0 < E e) (hA : ∀ e, 0 < A e)
+    (hne : ∀ e, r (a e) ≠ r (b e))
+    (hker : ∀ u : F → ℝ, (axialCompatibility r a b * S) *ᵥ u = 0 → u = 0) :
+    (∀ f : F → ℝ, ∃! u : F → ℝ,
+      ((axialCompatibility r a b * S)ᵀ
+        * Matrix.diagonal (fun e => E e * A e / memberLength r a b e ^ 3)
+        * (axialCompatibility r a b * S)) *ᵥ u = f) ∧
+    (∀ g : J × Fin 2 → ℝ, ∃! p : (F → ℝ) × (J × Fin 2 → ℝ),
+      ((axialCompatibility r a b)ᵀ
+          * Matrix.diagonal (fun e => E e * A e / memberLength r a b e ^ 3)
+          * axialCompatibility r a b) *ᵥ (S *ᵥ p.1) = g + p.2
+        ∧ Sᵀ *ᵥ p.2 = 0) := by
+  have hPD : (((axialCompatibility r a b * S)ᵀ
+      * Matrix.diagonal (fun e => E e * A e / memberLength r a b e ^ 3)
+      * (axialCompatibility r a b * S))).PosDef :=
+    (supported_posDef_iff_of_axial r a b S hE hA hne).mpr hker
+  exact ⟨fun f => supported_existsUnique_of_posDef r a b S _ hPD f,
+    fun g => supported_residual_existsUnique_of_posDef r a b S _ hPD g⟩
+
+/-! ## G. Reciprocal work -/
+
+/-- Symmetry of the supported stiffness: the supported stiffness is
+the Gram matrix of the supported compatibility map against the
+diagonal member law, so it is symmetric. Symmetry is structural and
+needs no sign hypothesis on the weights; for nonnegative weights it
+also follows from positive semidefiniteness of the supported
+stiffness (nonnegative stored energy). -/
+lemma supported_stiffness_isSymm {J M F : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M]
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) F ℝ) (k : M → ℝ) :
+    ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+      * (axialCompatibility r a b * S)).IsSymm := by
+  generalize (axialCompatibility r a b * S) = B
+  unfold Matrix.IsSymm
+  rw [Matrix.transpose_mul, Matrix.transpose_mul, Matrix.diagonal_transpose,
+    Matrix.transpose_transpose, Matrix.mul_assoc]
+
+/-- Symmetry of the supported stiffness bilinear form: for a symmetric
+supported stiffness, pairing one supported displacement against the
+stiffness applied to another is unchanged when the two displacements
+are exchanged. This is the existing symmetric-matrix bilinear identity
+at the supported stiffness; no load or solve hypothesis is used. -/
+lemma supported_dotProduct_mulVec_comm {J M F : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M] [Fintype F]
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) F ℝ) (k : M → ℝ)
+    (u v : F → ℝ) :
+    u ⬝ᵥ (((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)) *ᵥ v)
+      = v ⬝ᵥ (((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)) *ᵥ u) := by
+  exact (supported_stiffness_isSymm r a b S k).dotProduct_mulVec_comm
+
+/-- Reciprocal work for two supported loads: for one symmetric
+supported stiffness (same reference geometry, supports and weights in
+both load cases) and solutions `K *ᵥ u = f`, `K *ᵥ v = g`, the work of
+`f` through `v` equals the work of `g` through `u`. The loads `f` and
+`g` are independent. No reciprocity is claimed between solutions of two
+different stiffnesses, or for follower loads or contact switching. -/
+theorem supported_reciprocalWork {J M F : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M] [Fintype F]
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) F ℝ) (k : M → ℝ)
+    {u v f g : F → ℝ}
+    (hu : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)) *ᵥ u = f)
+    (hv : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)) *ᵥ v = g) :
+    f ⬝ᵥ v = g ⬝ᵥ u := by
+  have h := supported_dotProduct_mulVec_comm r a b S k u v
+  rw [hv, hu] at h
+  rw [dotProduct_comm f v, dotProduct_comm g u]
+  exact h.symm
+
+/-! ## H. Load-parameter identifiability -/
+
+/-- Load-parameter observation matrix at fixed supported stiffness:
+`Cmat * K⁻¹ * Bload`, where `K` is the supported stiffness
+`(axialCompatibility r a b * S)ᵀ * Matrix.diagonal k *
+(axialCompatibility r a b * S)`. The truss data and weights `k` are
+fixed knowns; only the load parameters multiplied by `Bload` are
+unknown, so the parameter-to-observation map is linear. At a
+non-invertible `K` the inverse is the totalized matrix inverse and the
+physical reading needs positive definiteness, as in the theorems
+below. -/
+noncomputable def loadObservationMatrix {J M : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M] {nf np nm : ℕ}
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) (Fin nf) ℝ) (k : M → ℝ)
+    (Cmat : Matrix (Fin nm) (Fin nf) ℝ)
+    (Bload : Matrix (Fin nf) (Fin np) ℝ) :
+    Matrix (Fin nm) (Fin np) ℝ :=
+  Cmat * ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+      * (axialCompatibility r a b * S))⁻¹ * Bload
+/-- Forward observation at fixed supported stiffness: a supported
+displacement `u` solving the supported system at load `Bload *ᵥ θ`
+is observed as the linear observation matrix applied to `θ`.
+Uses the supported inverse characterization
+`supported_mulVec_eq_iff_inv_mulVec`. -/
+lemma loadObservation_eq_of_supported_eq {J M : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M] {nf np nm : ℕ}
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) (Fin nf) ℝ) (k : M → ℝ)
+    (hPD : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)).PosDef)
+    (Cmat : Matrix (Fin nm) (Fin nf) ℝ)
+    (Bload : Matrix (Fin nf) (Fin np) ℝ)
+    {u : Fin nf → ℝ} {θ : Fin np → ℝ}
+    (hu : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)) *ᵥ u = Bload *ᵥ θ) :
+    Cmat *ᵥ u
+      = loadObservationMatrix r a b S k Cmat Bload *ᵥ θ := by
+  have hu' := (supported_mulVec_eq_iff_inv_mulVec r a b S k hPD).mp hu
+  rw [hu']
+  simp only [loadObservationMatrix, ← Matrix.mulVec_mulVec]
+
+/-- Realized supported response: at positive-definite fixed
+supported stiffness, `K⁻¹ *ᵥ (Bload *ᵥ θ)` solves the supported
+system at load `Bload *ᵥ θ` and is observed as the linear observation
+matrix applied to `θ`. Uses the supported inverse
+characterization `supported_mulVec_eq_iff_inv_mulVec`. -/
+lemma loadObservation_supported_response {J M : Type*} [Fintype J]
+    [DecidableEq J] [Fintype M] [DecidableEq M] {nf np nm : ℕ}
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) (Fin nf) ℝ) (k : M → ℝ)
+    (hPD : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)).PosDef)
+    (Cmat : Matrix (Fin nm) (Fin nf) ℝ)
+    (Bload : Matrix (Fin nf) (Fin np) ℝ)
+    (θ : Fin np → ℝ) :
+    ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)) *ᵥ
+      (((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S))⁻¹ *ᵥ (Bload *ᵥ θ))
+      = Bload *ᵥ θ
+    ∧ Cmat *ᵥ (((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S))⁻¹ *ᵥ (Bload *ᵥ θ))
+      = loadObservationMatrix r a b S k Cmat Bload *ᵥ θ := by
+  have h1 : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)) *ᵥ
+      (((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S))⁻¹ *ᵥ (Bload *ᵥ θ))
+      = Bload *ᵥ θ :=
+    (supported_mulVec_eq_iff_inv_mulVec r a b S k hPD).mpr rfl
+  exact ⟨h1,
+    loadObservation_eq_of_supported_eq r a b S k hPD Cmat Bload h1⟩
+/-- Known stiffness with unknown loads: at positive-definite fixed
+supported stiffness, if the sensor map has trivial kernel and the
+load basis has trivial kernel on the direction space `V`, then load
+parameters on `theta0 + V` are identifiable from the observation.
+The two kernel conditions are sufficient, not necessary: the exact
+obstruction is a nonzero kernel direction of the composite
+observation map inside `V`, and a sensor kernel that misses the
+realized response subspace does not by itself obstruct
+identifiability. -/
+lemma loadObservation_identifiableOnAffine_of_kernels
+    {J M : Type*} [Fintype J] [DecidableEq J] [Fintype M]
+    [DecidableEq M] {nf np nm : ℕ}
+    (r : J → (Fin 2 → ℝ)) (a b : M → J)
+    (S : Matrix (J × Fin 2) (Fin nf) ℝ) (k : M → ℝ)
+    (hPD : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+        * (axialCompatibility r a b * S)).PosDef)
+    (Cmat : Matrix (Fin nm) (Fin nf) ℝ)
+    (Bload : Matrix (Fin nf) (Fin np) ℝ) (theta0 : Fin np → ℝ)
+    (V : Submodule ℝ (Fin np → ℝ))
+    (hC : ∀ w : Fin nf → ℝ, Cmat *ᵥ w = 0 → w = 0)
+    (hB : ∀ v : Fin np → ℝ, v ∈ V → Bload *ᵥ v = 0 → v = 0) :
+    Statistics.UncertaintyPropagation.IdentifiableOnAffine
+      (loadObservationMatrix r a b S k Cmat Bload)
+      (AffineSubspace.mk' theta0 V) := by
+  rw [Statistics.UncertaintyPropagation.identifiableOnAffine_mk'_iff_trivial_ker]
+  intro v hv hHv
+  have h := hHv
+  simp only [loadObservationMatrix, ← Matrix.mulVec_mulVec] at h
+  have hK := hC _ h
+  have hdet := isUnit_iff_ne_zero.mpr (ne_of_gt hPD.det_pos)
+  have hKK := Matrix.mul_nonsing_inv _ hdet
+  have hBv : Bload *ᵥ v = 0 := by
+    have e : ((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+          * (axialCompatibility r a b * S)) *ᵥ
+        ((((axialCompatibility r a b * S)ᵀ * Matrix.diagonal k
+          * (axialCompatibility r a b * S))⁻¹) *ᵥ (Bload *ᵥ v))
+        = Bload *ᵥ v := by
+      rw [Matrix.mulVec_mulVec, hKK, Matrix.one_mulVec]
+    rw [hK, Matrix.mulVec_zero] at e
+    exact e.symm
+  exact hB v hv hBv
+
+/-- Scope guard for unknown stiffness: the one-degree-of-freedom
+displacement at unit load as a function of a positive scalar
+stiffness `s`, namely `s⁻¹`, is not affine (in particular not linear)
+in `s`. A stiffness-parameter inverse problem therefore cannot reuse
+the fixed-stiffness linear observation matrix; it needs a separate
+nonlinear or local model. No varying-stiffness identifiability
+statement is made here. -/
+lemma inv_not_affine_on_pos :
+    ¬ ∃ a b : ℝ, ∀ s : ℝ, 0 < s → s⁻¹ = a * s + b := by
+  rintro ⟨a, b, h⟩
+  have h1 := h 1 one_pos
+  have h2 := h 2 two_pos
+  have h3 := h 3 three_pos
+  norm_num at h1 h2 h3
+  linarith
 
 end Mechanics.TrussCompatibility
