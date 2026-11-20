@@ -13,6 +13,7 @@ public import PhyslibExt.ContinuumMechanics.ControlVolumes
 
 import Mathlib.Analysis.Calculus.Deriv.MeanValue
 import Mathlib.Analysis.Calculus.Deriv.Pow
+import Mathlib.Analysis.SpecialFunctions.Log.Deriv
 import Mathlib.Analysis.SpecialFunctions.Pow.Deriv
 import Mathlib.Tactic.FieldSimp
 import Mathlib.Tactic.LinearCombination
@@ -23,7 +24,7 @@ import Mathlib.Tactic.Ring
 import PhyslibExt.EarthScience.PoissonAdiabat
 
 /-!
-# Perfect-gas ports: the stagnation state adapter and the isentropic mass flux
+# Perfect-gas ports: stagnation state, isentropic mass flux, area-velocity relation, normal shocks
 
 ## i. Overview
 
@@ -56,6 +57,33 @@ same mass flow at the same stagnation state, `G(M) A = G(1) A*`, therefore have
 `x / 0 = 0`, so the area ratio needs `M > 0`. Both branches occur, and strict monotonicity on each
 side makes the inverse Mach number of an area ratio unique only once a branch is selected.
 
+In steady quasi-one-dimensional flow along the duct coordinate `x`, with area `A(x)`, density
+`ρ(x)` and speed `u(x)`, let the ideal-gas law, the declared isentropic connection to one
+stagnation state, the stagnation energy balance and the mass flow `ρ u A = ṁ` hold near a station
+`x₀`. Differentiating the stagnation density ratio and the energy balance gives
+`ρ' / ρ = -M ^ 2 u' / u`, and differentiating the mass flow gives `ρ' / ρ + u' / u + A' / A = 0`;
+together they give the area-velocity relation `A' / A = (M ^ 2 - 1) u' / u` for positive `A`,
+`ρ`, `u`. So a sonic station has stationary area, `A' = 0`: a necessary condition for a throat,
+not an area minimum, which these results do not assert. The converse needs more than stationary
+area: `u' ≠ 0` at the station gives `M = 1` through the relation, and so does a mass flow selected
+at the choked value `ṁ = G(1) A` of the sonic maximum, without any derivative. Stationary area
+alone does not, even at a throat: a subsonic venturi has a strict area minimum, hence `A' = 0`,
+with `u' = 0` and `M < 1`. Both cases are constructed in the test module.
+
+A steady normal shock joins an upstream state `(ρ1, u1, p1, T1)` to a downstream state
+`(ρ2, u2, p2, T2)` of the same gas: both obey `p = ρ R T`, and the jump conditions conserve the
+mass flux `ρ u`, the momentum flux `p + ρ u ^ 2` and the total enthalpy `cp T + u ^ 2 / 2`
+(`IsNormalShockJump`). These balance laws are declared model inputs, not derived. With the
+upstream sound speed `a1 ^ 2 = γ R T1`, Mach number `M1 = |u1| / a1` and `m = M1 ^ 2`, the trivial
+branch, the downstream state equal to the upstream one, always solves them, and for `u1 > 0` so
+does the distinct branch `ρ2 / ρ1 = (γ + 1) m / ((γ - 1) m + 2)`,
+`p2 / p1 = (2 γ m - (γ - 1)) / (γ + 1)`, with the temperature ratio their quotient. The distinct
+root is a positive state exactly for `m > (γ - 1) / (2 γ)`, where its pressure turns positive.
+Every solution with positive densities and temperatures is on one of the two branches, on the
+distinct one only above that threshold, and the two coincide at `m = 1`. The classification is
+about positive states, not every real root: the entropy condition `m ≥ 1`, which selects the
+compression shocks, is not part of it.
+
 ## ii. Key results
 
 - `FluidDynamics.PerfectGasPorts.specificEnthalpy_perfectGas`: the port enthalpy is `cp T`.
@@ -80,6 +108,25 @@ side makes the inverse Mach number of an area ratio unique only once a branch is
 - `FluidDynamics.PerfectGasPorts.area_ratio_eq_and_one_le`: `A / A* = G(1) / G(M) ≥ 1`.
 - `FluidDynamics.PerfectGasPorts.isentropicMassFlux_zero`: zero flux and no area ratio at
   `M = 0`.
+- `FluidDynamics.PerfectGasPorts.isentropic_density_derivative`,
+  `FluidDynamics.PerfectGasPorts.mass_flow_derivative`: `ρ' / ρ = -M ^ 2 u' / u` and
+  `ρ' / ρ + u' / u + A' / A = 0`.
+- `FluidDynamics.PerfectGasPorts.area_velocity_relation`: `A' / A = (M ^ 2 - 1) u' / u`.
+- `FluidDynamics.PerfectGasPorts.area_deriv_eq_zero_of_mach_eq_one`: a sonic station has
+  stationary area, `A' = 0`.
+- `FluidDynamics.PerfectGasPorts.mach_eq_one_of_area_deriv_eq_zero`,
+  `FluidDynamics.PerfectGasPorts.mach_eq_one_of_choked`: a station of stationary area with
+  `u' ≠ 0`, or a station at the choked mass flow, is sonic.
+- `FluidDynamics.PerfectGasPorts.IsNormalShockJump`: the normal-shock jump conditions.
+- `FluidDynamics.PerfectGasPorts.isNormalShockJump_self`,
+  `FluidDynamics.PerfectGasPorts.isNormalShockJump_distinct`: the trivial and the distinct branch.
+- `FluidDynamics.PerfectGasPorts.normalShock_classification`: every solution with positive
+  densities and temperatures is on one of the two branches, the distinct one only above
+  `(γ - 1) / (2 γ)`.
+- `FluidDynamics.PerfectGasPorts.isNormalShockJump_distinct_pos_iff`: the distinct root is a
+  positive state exactly above `(γ - 1) / (2 γ)`.
+- `FluidDynamics.PerfectGasPorts.shockRatio_eq_one_iff`: the two roots coincide exactly at
+  `m = 1`.
 
 ## iii. Table of contents
 
@@ -90,15 +137,26 @@ side makes the inverse Mach number of an area ratio unique only once a branch is
 - E. The isentropic mass flux
 - F. Monotonicity and the sonic maximum
 - G. The critical-area ratio
+- H. The differentiated isentrope and mass conservation
+- I. The area-velocity relation and stationary area at a sonic station
+- J. Normal-shock jump conditions and branch ratios
+- K. The two normal-shock branches
 
 ## iv. References
 
 - J. D. Anderson, *Modern Compressible Flow*, 3rd ed., McGraw-Hill, 2003, ch. 3: the total
-  temperature `T0 / T = 1 + (γ - 1) M ^ 2 / 2` from the adiabatic energy equation, and the total
-  pressure and density ratios of an isentropic deceleration; ch. 5: the area-Mach-number relation
-  and choked mass flow in quasi-one-dimensional isentropic flow.
-- H. W. Liepmann and A. Roshko, *Elements of Gasdynamics*, Wiley, 1957, ch. 2: the mass flux per
-  unit area and its maximum at `M = 1`.
+  temperature `T0 / T = 1 + (γ - 1) M ^ 2 / 2` from the adiabatic energy equation, the total
+  pressure and density ratios of an isentropic deceleration, and the normal-shock ratios
+  `ρ2 / ρ1`, `p2 / p1`, `T2 / T1` as functions of `M1`; ch. 5: the area-velocity and
+  area-Mach-number relations, sonic flow at a minimum-area section and choked mass flow in
+  quasi-one-dimensional isentropic flow.
+- H. W. Liepmann and A. Roshko, *Elements of Gasdynamics*, Wiley, 1957, ch. 2: flow in a stream
+  tube of varying area, the mass flux per unit area and its maximum at `M = 1`.
+- A. H. Shapiro, *The Dynamics and Thermodynamics of Compressible Fluid Flow*, vol. 1, Ronald
+  Press, 1953, ch. 5: the trivial and the shock solution of the normal-shock jump conditions.
+- NACA Report 1135, *Equations, Tables, and Charts for Compressible Flow*, 1953: the
+  normal-shock table (`M1 = 2`, `γ = 1.4`: `p2 / p1 = 4.5`, `ρ2 / ρ1 = 2.667`,
+  `T2 / T1 = 1.688`).
 - Y. A. Çengel and M. A. Boles, *Thermodynamics: An Engineering Approach*, McGraw-Hill, the
   compressible-flow chapter: stagnation enthalpy `h0 = h + V ^ 2 / 2` and stagnation properties.
 - ISO 80000-11, *Quantities and units, Part 11: Characteristic numbers*: the Mach number.
@@ -679,5 +737,587 @@ lemma isentropicMassFlux_zero (p0 T0 R γ : ℝ) :
   have h0 : isentropicMassFlux p0 T0 R γ 0 = 0 := by
     simp [isentropicMassFlux]
   exact ⟨h0, by rw [h0, div_zero]; norm_num⟩
+
+/-! ## H. The differentiated isentrope and mass conservation -/
+
+open scoped Topology
+
+/-- **Differentiated isentrope.** Near the station `x₀` let the temperature and density be
+positive and the ideal-gas law, the declared isentropic connection to the stagnation state and the
+stagnation energy balance hold, with `γ > 1`, `R > 0`, `cp = γ R / (γ - 1)`, `ρ0 > 0` and
+`p0 = ρ0 R T0`. At the station let `u > 0`, `a ^ 2 = γ R T` and `M = |u| / a`. If `ρ` and `u`
+have the derivatives `ρ'` and `u'` there, then `ρ' / ρ = -M ^ 2 u' / u`. -/
+lemma isentropic_density_derivative {γ R cp T0 ρ0 p0 a M x₀ ρ' u' : ℝ} {ρ u T p : ℝ → ℝ}
+    (hγ : 1 < γ) (hR : 0 < R) (hcp : cp = γ * R / (γ - 1)) (hρ0 : 0 < ρ0)
+    (hp0 : p0 = ρ0 * R * T0) (hT : ∀ᶠ x in 𝓝 x₀, 0 < T x) (hρ : ∀ᶠ x in 𝓝 x₀, 0 < ρ x)
+    (hp : ∀ᶠ x in 𝓝 x₀, p x = ρ x * R * T x)
+    (hs : ∀ᶠ x in 𝓝 x₀, p x / ρ x ^ γ = p0 / ρ0 ^ γ)
+    (hen : ∀ᶠ x in 𝓝 x₀, cp * T x + u x ^ 2 / 2 = cp * T0) (hu : 0 < u x₀)
+    (ha2 : a ^ 2 = γ * R * T x₀) (hM : M = |u x₀| / a) (hρ' : HasDerivAt ρ ρ' x₀)
+    (hu' : HasDerivAt u u' x₀) :
+    ρ' / ρ x₀ = -(M ^ 2) * (u' / u x₀) := by
+  have hγ1pos : 0 < γ - 1 := by linarith
+  have hγpos : 0 < γ := by linarith
+  have hcp_pos : 0 < cp := by rw [hcp]; exact div_pos (mul_pos hγpos hR) hγ1pos
+  have hTx := hT.self_of_nhds
+  have hρx := hρ.self_of_nhds
+  have henx := hen.self_of_nhds
+  have hT0pos : 0 < T0 := by
+    have h1 : 0 < cp * T0 := by rw [← henx]; positivity
+    exact pos_of_mul_pos_right h1 hcp_pos.le
+  have hlog : ∀ᶠ x in 𝓝 x₀, Real.log (ρ x) =
+      Real.log ρ0 - 1 / (γ - 1) * (Real.log T0 - Real.log (T x)) := by
+    filter_upwards [hT, hρ, hp, hs, hen] with x hTx' hρx' hpx hsx henx'
+    have hdr := (stagnation_density_ratio (a := Real.sqrt (γ * R * T x))
+      (M := |u x| / Real.sqrt (γ * R * T x)) hγ hR hTx' hcp (Real.sq_sqrt (by positivity)) rfl
+      henx' hρx' hρ0 hpx hp0 hsx).1
+    have h1 := congrArg Real.log hdr
+    rw [Real.log_div hρ0.ne' hρx'.ne', Real.log_rpow (div_pos hT0pos hTx'),
+      Real.log_div hT0pos.ne' hTx'.ne'] at h1
+    linarith
+  have hTeq : ∀ᶠ x in 𝓝 x₀, T x = T0 - u x ^ 2 / (2 * cp) := by
+    filter_upwards [hen] with x hx
+    field_simp
+    linarith
+  have hTd : HasDerivAt T (-(u x₀ * u') / cp) x₀ := by
+    have h := ((hu'.pow 2).div_const (2 * cp)).const_sub T0
+    have h' := h.congr_of_eventuallyEq hTeq
+    convert h' using 1
+    field_simp
+    ring
+  have hrhs : HasDerivAt (fun x => Real.log ρ0 - 1 / (γ - 1) * (Real.log T0 - Real.log (T x)))
+      (1 / (γ - 1) * (-(u x₀ * u') / cp / T x₀)) x₀ := by
+    have h := (((hTd.log hTx.ne').const_sub (Real.log T0)).const_mul (1 / (γ - 1))).const_sub
+      (Real.log ρ0)
+    convert h using 1
+    ring
+  have hlhs : HasDerivAt (fun x => Real.log (ρ x)) (ρ' / ρ x₀) x₀ := hρ'.log hρx.ne'
+  have heq := hlhs.unique (hrhs.congr_of_eventuallyEq hlog)
+  have hM2 : M ^ 2 = u x₀ ^ 2 / a ^ 2 := by rw [hM, div_pow, sq_abs]
+  rw [heq, hM2, ha2, hcp]
+  field_simp
+
+/-- **Differentiated mass conservation.** If `ρ u A = ṁ` near the station `x₀`, the three
+factors are positive at the station and have the derivatives `ρ'`, `u'`, `A'` there, then
+`ρ' / ρ + u' / u + A' / A = 0`. -/
+lemma mass_flow_derivative {mdot x₀ A' ρ' u' : ℝ} {A ρ u : ℝ → ℝ}
+    (hmass : ∀ᶠ x in 𝓝 x₀, ρ x * u x * A x = mdot) (hρ : 0 < ρ x₀) (hu : 0 < u x₀)
+    (hA : 0 < A x₀) (hA' : HasDerivAt A A' x₀) (hρ' : HasDerivAt ρ ρ' x₀)
+    (hu' : HasDerivAt u u' x₀) :
+    ρ' / ρ x₀ + u' / u x₀ + A' / A x₀ = 0 := by
+  have hprod := (hρ'.mul hu').mul hA'
+  have hconst : HasDerivAt (fun x => ρ x * u x * A x) 0 x₀ :=
+    (hasDerivAt_const x₀ mdot).congr_of_eventuallyEq hmass
+  have h0 := hprod.unique hconst
+  simp only [Pi.mul_apply] at h0
+  field_simp
+  linear_combination h0
+
+/-! ## I. The area-velocity relation and stationary area at a sonic station -/
+
+/-- **Area-velocity relation.** Under the hypotheses of `isentropic_density_derivative`, with
+`ρ u A = ṁ` near the station, `A > 0` at the station and `A` differentiable there with derivative
+`A'`, the steady isentropic quasi-one-dimensional flow has `A' / A = (M ^ 2 - 1) u' / u`. -/
+lemma area_velocity_relation {γ R cp T0 ρ0 p0 mdot a M x₀ A' ρ' u' : ℝ}
+    {A ρ u T p : ℝ → ℝ} (hγ : 1 < γ) (hR : 0 < R) (hcp : cp = γ * R / (γ - 1))
+    (hρ0 : 0 < ρ0) (hp0 : p0 = ρ0 * R * T0) (hT : ∀ᶠ x in 𝓝 x₀, 0 < T x)
+    (hρ : ∀ᶠ x in 𝓝 x₀, 0 < ρ x) (hp : ∀ᶠ x in 𝓝 x₀, p x = ρ x * R * T x)
+    (hs : ∀ᶠ x in 𝓝 x₀, p x / ρ x ^ γ = p0 / ρ0 ^ γ)
+    (hen : ∀ᶠ x in 𝓝 x₀, cp * T x + u x ^ 2 / 2 = cp * T0)
+    (hmass : ∀ᶠ x in 𝓝 x₀, ρ x * u x * A x = mdot) (hu : 0 < u x₀) (hA : 0 < A x₀)
+    (ha2 : a ^ 2 = γ * R * T x₀) (hM : M = |u x₀| / a) (hA' : HasDerivAt A A' x₀)
+    (hρ' : HasDerivAt ρ ρ' x₀) (hu' : HasDerivAt u u' x₀) :
+    A' / A x₀ = (M ^ 2 - 1) * (u' / u x₀) := by
+  have h1 := isentropic_density_derivative hγ hR hcp hρ0 hp0 hT hρ hp hs hen hu ha2 hM hρ' hu'
+  have h2 := mass_flow_derivative hmass hρ.self_of_nhds hu hA hA' hρ' hu'
+  linear_combination h2 - h1
+
+/-- **A sonic station has stationary area.** Under the hypotheses of `area_velocity_relation`,
+`M = 1` gives `A' = 0`: a necessary condition for a throat, not an area minimum. -/
+lemma area_deriv_eq_zero_of_mach_eq_one {γ R cp T0 ρ0 p0 mdot a M x₀ A' ρ' u' : ℝ}
+    {A ρ u T p : ℝ → ℝ} (hγ : 1 < γ) (hR : 0 < R) (hcp : cp = γ * R / (γ - 1))
+    (hρ0 : 0 < ρ0) (hp0 : p0 = ρ0 * R * T0) (hT : ∀ᶠ x in 𝓝 x₀, 0 < T x)
+    (hρ : ∀ᶠ x in 𝓝 x₀, 0 < ρ x) (hp : ∀ᶠ x in 𝓝 x₀, p x = ρ x * R * T x)
+    (hs : ∀ᶠ x in 𝓝 x₀, p x / ρ x ^ γ = p0 / ρ0 ^ γ)
+    (hen : ∀ᶠ x in 𝓝 x₀, cp * T x + u x ^ 2 / 2 = cp * T0)
+    (hmass : ∀ᶠ x in 𝓝 x₀, ρ x * u x * A x = mdot) (hu : 0 < u x₀) (hA : 0 < A x₀)
+    (ha2 : a ^ 2 = γ * R * T x₀) (hM : M = |u x₀| / a) (hA' : HasDerivAt A A' x₀)
+    (hρ' : HasDerivAt ρ ρ' x₀) (hu' : HasDerivAt u u' x₀) (hM1 : M = 1) :
+    A' = 0 := by
+  have h := area_velocity_relation hγ hR hcp hρ0 hp0 hT hρ hp hs hen hmass hu hA ha2 hM hA' hρ'
+    hu'
+  rw [hM1] at h
+  have h0 : A' / A x₀ = 0 := by rw [h]; ring
+  exact (div_eq_zero_iff.mp h0).resolve_right hA.ne'
+
+/-- **Stationary area with accelerating flow is sonic.** Under the hypotheses of
+`area_velocity_relation` with stationary area `A' = 0`, a positive sound speed and `u' ≠ 0` at the
+station, `M = 1`. -/
+lemma mach_eq_one_of_area_deriv_eq_zero {γ R cp T0 ρ0 p0 mdot a M x₀ ρ' u' : ℝ}
+    {A ρ u T p : ℝ → ℝ} (hγ : 1 < γ) (hR : 0 < R) (hcp : cp = γ * R / (γ - 1))
+    (hρ0 : 0 < ρ0) (hp0 : p0 = ρ0 * R * T0) (hT : ∀ᶠ x in 𝓝 x₀, 0 < T x)
+    (hρ : ∀ᶠ x in 𝓝 x₀, 0 < ρ x) (hp : ∀ᶠ x in 𝓝 x₀, p x = ρ x * R * T x)
+    (hs : ∀ᶠ x in 𝓝 x₀, p x / ρ x ^ γ = p0 / ρ0 ^ γ)
+    (hen : ∀ᶠ x in 𝓝 x₀, cp * T x + u x ^ 2 / 2 = cp * T0)
+    (hmass : ∀ᶠ x in 𝓝 x₀, ρ x * u x * A x = mdot) (hu : 0 < u x₀) (hA : 0 < A x₀)
+    (ha : 0 < a) (ha2 : a ^ 2 = γ * R * T x₀) (hM : M = |u x₀| / a) (hA' : HasDerivAt A 0 x₀)
+    (hρ' : HasDerivAt ρ ρ' x₀) (hu' : HasDerivAt u u' x₀) (hu'0 : u' ≠ 0) :
+    M = 1 := by
+  have h := area_velocity_relation hγ hR hcp hρ0 hp0 hT hρ hp hs hen hmass hu hA ha2 hM hA' hρ'
+    hu'
+  rw [zero_div] at h
+  have hq : u' / u x₀ ≠ 0 := div_ne_zero hu'0 hu.ne'
+  have hM2 : M ^ 2 = 1 := by
+    rcases mul_eq_zero.mp h.symm with h1 | h1
+    · linarith
+    · exact absurd h1 hq
+  have hMnn : 0 ≤ M := by rw [hM]; exact div_nonneg (abs_nonneg _) ha.le
+  nlinarith
+
+/-- **The choked mass flow makes the station sonic.** Under the hypotheses of
+`massFlux_eq_isentropicMassFlux` at a station of area `A > 0`, if its mass flow `ρ u A = ṁ` is
+selected at the choked value `ṁ = G(1) A`, the sonic maximum of the isentropic mass flux, then
+`M = 1`. -/
+lemma mach_eq_one_of_choked {γ R T T0 cp a u M ρ ρ0 p p0 A mdot : ℝ} (hγ : 1 < γ) (hR : 0 < R)
+    (hT : 0 < T) (hcp : cp = γ * R / (γ - 1)) (ha : 0 < a) (ha2 : a ^ 2 = γ * R * T)
+    (hM : M = |u| / a) (hen : cp * T + u ^ 2 / 2 = cp * T0) (hρ : 0 < ρ) (hρ0 : 0 < ρ0)
+    (hp : p = ρ * R * T) (hp0 : p0 = ρ0 * R * T0) (hs : p / ρ ^ γ = p0 / ρ0 ^ γ) (hA : 0 < A)
+    (hmass : ρ * u * A = mdot) (hchoke : mdot = isentropicMassFlux p0 T0 R γ 1 * A) :
+    M = 1 := by
+  have hflux := massFlux_eq_isentropicMassFlux hγ hR hT hcp ha ha2 hM hen hρ hρ0 hp hp0 hs
+  have hγpos : 0 < γ := by linarith
+  have hγ1pos : 0 < γ - 1 := by linarith
+  have hcp_pos : 0 < cp := by rw [hcp]; exact div_pos (mul_pos hγpos hR) hγ1pos
+  have hT0pos : 0 < T0 := by
+    have h1 : 0 < cp * T0 := by rw [← hen]; positivity
+    exact pos_of_mul_pos_right h1 hcp_pos.le
+  have hp0pos : 0 < p0 := by rw [hp0]; positivity
+  have hρu : ρ * u = isentropicMassFlux p0 T0 R γ 1 :=
+    mul_right_cancel₀ hA.ne' (hmass.trans hchoke)
+  by_contra hM1
+  have hlt := isentropicMassFlux_lt_sonic hp0pos hT0pos hR hγ hM1
+  have hle : ρ * u ≤ ρ * |u| := mul_le_mul_of_nonneg_left (le_abs_self u) hρ.le
+  linarith
+
+/-! ## J. Normal-shock jump conditions and branch ratios -/
+
+/-- The steady normal-shock jump conditions between an upstream state `(ρ1, u1, p1, T1)` and a
+downstream state `(ρ2, u2, p2, T2)` of a calorically perfect gas with gas constant `R` and
+heat-capacity ratio `γ`: the ideal-gas law `p = ρ R T` at both states, and conservation of the
+mass flux `ρ u`, the momentum flux `p + ρ u ^ 2` and the total enthalpy `cp T + u ^ 2 / 2` with
+`cp = γ R / (γ - 1)`. -/
+def IsNormalShockJump (γ R ρ1 u1 p1 T1 ρ2 u2 p2 T2 : ℝ) : Prop :=
+  p1 = ρ1 * R * T1 ∧ p2 = ρ2 * R * T2 ∧ ρ1 * u1 = ρ2 * u2 ∧
+    p1 + ρ1 * u1 ^ 2 = p2 + ρ2 * u2 ^ 2 ∧
+    γ * R / (γ - 1) * T1 + u1 ^ 2 / 2 = γ * R / (γ - 1) * T2 + u2 ^ 2 / 2
+
+/-- The density ratio `ρ2 / ρ1 = (γ + 1) m / ((γ - 1) m + 2)` of the distinct normal-shock
+branch, at the squared upstream Mach number `m = M1 ^ 2`. -/
+noncomputable def shockDensityRatio (γ m : ℝ) : ℝ :=
+  (γ + 1) * m / ((γ - 1) * m + 2)
+
+/-- The pressure ratio `p2 / p1 = (2 γ m - (γ - 1)) / (γ + 1)` of the distinct normal-shock
+branch, at `m = M1 ^ 2`. -/
+noncomputable def shockPressureRatio (γ m : ℝ) : ℝ :=
+  (2 * γ * m - (γ - 1)) / (γ + 1)
+
+/-- The temperature ratio `T2 / T1` of the distinct normal-shock branch: the pressure ratio over
+the density ratio. -/
+noncomputable def shockTemperatureRatio (γ m : ℝ) : ℝ :=
+  shockPressureRatio γ m / shockDensityRatio γ m
+
+/-! ## K. The two normal-shock branches -/
+
+/-- The trivial branch always exists: a perfect-gas state `p1 = ρ1 R T1` satisfies the jump
+conditions with itself as the downstream state. -/
+lemma isNormalShockJump_self {γ R ρ1 u1 p1 T1 : ℝ} (hp1 : p1 = ρ1 * R * T1) :
+    IsNormalShockJump γ R ρ1 u1 p1 T1 ρ1 u1 p1 T1 := by
+  unfold IsNormalShockJump
+  exact ⟨hp1, hp1, rfl, rfl, rfl⟩
+
+/-- The distinct branch solves the jump conditions: for `γ > 1`, `R > 0`, an upstream perfect-gas
+state `p1 = ρ1 R T1` with `T1 > 0` and `u1 > 0`, sound speed `a1 ^ 2 = γ R T1` and Mach number
+`M1 = |u1| / a1`, the state with `ρ2 = ρ1 r`, `u2 = u1 / r`, `p2 = p1 P` and `T2 = T1 P / r`,
+where `r` and `P` are the density and pressure ratios at `m = M1 ^ 2`, satisfies the jump
+conditions. This holds whatever the sign of `P`: it is an algebraic statement, and
+`isNormalShockJump_distinct_pos_iff` says when the root is a positive state. -/
+lemma isNormalShockJump_distinct {γ R ρ1 u1 p1 T1 a1 M1 : ℝ} (hγ : 1 < γ) (hR : 0 < R)
+    (hT1 : 0 < T1) (hu1 : 0 < u1) (hp1 : p1 = ρ1 * R * T1) (ha1 : a1 ^ 2 = γ * R * T1)
+    (hM1 : M1 = |u1| / a1) :
+    IsNormalShockJump γ R ρ1 u1 p1 T1 (ρ1 * shockDensityRatio γ (M1 ^ 2))
+      (u1 / shockDensityRatio γ (M1 ^ 2)) (p1 * shockPressureRatio γ (M1 ^ 2))
+      (T1 * shockTemperatureRatio γ (M1 ^ 2)) := by
+  have hγpos : 0 < γ := by linarith
+  have hγ1pos : 0 < γ + 1 := by linarith
+  have hγ1ne : γ + 1 ≠ 0 := ne_of_gt hγ1pos
+  have ha1sqpos : 0 < a1 ^ 2 := by
+    rw [ha1]
+    exact mul_pos (mul_pos hγpos hR) hT1
+  have ha1ne : a1 ≠ 0 := by
+    intro h
+    have hz : a1 ^ 2 = 0 := by simp [h]
+    rw [hz] at ha1sqpos
+    exact lt_irrefl 0 ha1sqpos
+  have hu1ne : u1 ≠ 0 := ne_of_gt hu1
+  have habspos : 0 < |u1| := abs_pos.mpr hu1ne
+  have habsne : |u1| ≠ 0 := ne_of_gt habspos
+  have hM1ne : M1 ≠ 0 := by
+    rw [hM1]
+    exact div_ne_zero habsne ha1ne
+  have hmpos : 0 < M1 ^ 2 := sq_pos_of_ne_zero hM1ne
+  have hmne : M1 ^ 2 ≠ 0 := ne_of_gt hmpos
+  have hDpos : 0 < (γ - 1) * M1 ^ 2 + 2 := by
+    have h1 : 0 ≤ (γ - 1) * M1 ^ 2 := by
+      apply mul_nonneg
+      · linarith
+      · exact sq_nonneg M1
+    linarith
+  have hDne : (γ - 1) * M1 ^ 2 + 2 ≠ 0 := ne_of_gt hDpos
+  have hrpos : 0 < shockDensityRatio γ (M1 ^ 2) := by
+    unfold shockDensityRatio
+    exact div_pos (mul_pos hγ1pos hmpos) hDpos
+  have hrne : shockDensityRatio γ (M1 ^ 2) ≠ 0 := ne_of_gt hrpos
+  have hγRT1pos : 0 < γ * R * T1 := mul_pos (mul_pos hγpos hR) hT1
+  have hγRT1ne : γ * R * T1 ≠ 0 := ne_of_gt hγRT1pos
+  have hγsubpos : 0 < γ - 1 := by linarith
+  have hγsubne : γ - 1 ≠ 0 := ne_of_gt hγsubpos
+  have hNne : (γ + 1) * M1 ^ 2 ≠ 0 := mul_ne_zero hγ1ne hmne
+  have hm : M1 ^ 2 = u1 ^ 2 / (γ * R * T1) := by
+    rw [hM1, div_pow, sq_abs, ha1]
+  have hm' : M1 ^ 2 * (γ * R * T1) = u1 ^ 2 := by
+    rw [hm, div_mul_cancel₀ _ hγRT1ne]
+  unfold IsNormalShockJump
+  refine ⟨hp1, ?_, ?_, ?_, ?_⟩
+  · unfold shockTemperatureRatio
+    field_simp
+    linear_combination (shockPressureRatio γ (M1 ^ 2)) * hp1
+  · field_simp
+  · unfold shockDensityRatio shockPressureRatio
+    field_simp
+    have hKey : ((p1 + ρ1 * u1 ^ 2) * (γ + 1) - p1 * (2 * γ * M1 ^ 2 - (γ - 1))) * M1 ^ 2
+        - ρ1 * u1 ^ 2 * ((γ - 1) * M1 ^ 2 + 2) = 0 := by
+      linear_combination (-2 * γ * M1 ^ 2 * (M1 ^ 2 - 1)) * hp1
+        + (-2 * (M1 ^ 2 - 1) * ρ1) * hm'
+    linear_combination hKey
+  · unfold shockTemperatureRatio shockDensityRatio shockPressureRatio
+    field_simp
+    have hKey : (γ * R * T1 * 2 + (γ - 1) * u1 ^ 2) * (γ + 1) ^ 2 * M1 ^ 4
+        - ((γ - 1) * M1 ^ 2 + 2)
+          * (γ * R * T1 * 2 * M1 ^ 2 * (2 * γ * M1 ^ 2 - (γ - 1))
+            + (γ - 1) * u1 ^ 2 * ((γ - 1) * M1 ^ 2 + 2)) = 0 := by
+      linear_combination
+        ((γ - 1) * (((γ - 1) * M1 ^ 2 + 2) ^ 2 - (γ + 1) ^ 2 * (M1 ^ 2) ^ 2)) * hm'
+    linear_combination hKey
+
+/-- **Branch classification on the positive domain.** For `γ > 1`, `R > 0`, an upstream state
+with `ρ1, T1 > 0`, sound speed `a1 ^ 2 = γ R T1`, Mach number `M1 = |u1| / a1`, and a downstream
+state with `ρ2, T2 > 0` satisfying the jump conditions, either the downstream state is the
+upstream one (trivial branch), or `ρ2 / ρ1`, `p2 / p1` and `T2 / T1` are the density, pressure
+and temperature ratios of the distinct branch at `m = M1 ^ 2`, and then
+`m > (γ - 1) / (2 γ)`. With zero velocity the trivial branch is forced, so no sign hypothesis on
+`u1` is needed here. -/
+lemma normalShock_classification {γ R ρ1 u1 p1 T1 ρ2 u2 p2 T2 a1 M1 : ℝ} (hγ : 1 < γ)
+    (hR : 0 < R) (hρ1 : 0 < ρ1) (hT1 : 0 < T1) (hρ2 : 0 < ρ2) (hT2 : 0 < T2)
+    (ha1 : a1 ^ 2 = γ * R * T1) (hM1 : M1 = |u1| / a1)
+    (hjump : IsNormalShockJump γ R ρ1 u1 p1 T1 ρ2 u2 p2 T2) :
+    (ρ2 = ρ1 ∧ u2 = u1 ∧ p2 = p1 ∧ T2 = T1) ∨
+      (ρ2 / ρ1 = shockDensityRatio γ (M1 ^ 2) ∧ p2 / p1 = shockPressureRatio γ (M1 ^ 2) ∧
+        T2 / T1 = shockTemperatureRatio γ (M1 ^ 2) ∧ (γ - 1) / (2 * γ) < M1 ^ 2) := by
+  have hγpos : 0 < γ := by linarith
+  have hγne : γ ≠ 0 := ne_of_gt hγpos
+  have hRne : R ≠ 0 := ne_of_gt hR
+  have hT1ne : T1 ≠ 0 := ne_of_gt hT1
+  have hγsubpos : 0 < γ - 1 := by linarith
+  have hγsubne : γ - 1 ≠ 0 := ne_of_gt hγsubpos
+  have hρ2ne : ρ2 ≠ 0 := ne_of_gt hρ2
+  obtain ⟨hp1, hp2, hmass, hmom, henth⟩ := hjump
+  have henth' : γ * R * T1 + (γ - 1) * (u1 ^ 2 / 2)
+      = γ * R * T2 + (γ - 1) * (u2 ^ 2 / 2) := by
+    have h := congrArg (fun x => x * (γ - 1)) henth
+    field_simp at h
+    linear_combination h / 2
+  have hfact : ρ2 * (u1 - u2) * ((γ + 1) * u1 * u2 - (γ - 1) * u1 ^ 2 - 2 * γ * R * T1)
+      = 0 := by
+    linear_combination (-2 * γ * u1) * hp1 + (2 * γ * u1) * hp2
+      + (-2 * γ * R * T1 - 2 * γ * u1 ^ 2) * hmass
+      + (2 * γ * u1) * hmom + (-2 * u1 * ρ2) * henth'
+  have hCase : u1 = u2 ∨ (γ + 1) * u1 * u2 - (γ - 1) * u1 ^ 2 - 2 * γ * R * T1 = 0 := by
+    rcases mul_eq_zero.mp hfact with h12 | hG
+    · rcases mul_eq_zero.mp h12 with hρ | hu
+      · exfalso
+        exact hρ2ne hρ
+      · left
+        exact sub_eq_zero.mp hu
+    · right
+      exact hG
+  rcases hCase with hu12 | hG
+  · have hu21 : u2 = u1 := hu12.symm
+    have hCne : γ * R / (γ - 1) ≠ 0 :=
+      div_ne_zero (mul_ne_zero hγne hRne) hγsubne
+    by_cases hu1zero : u1 = 0
+    · have hu2zero : u2 = 0 := by rw [hu21, hu1zero]
+      have hmom0 : p1 = p2 := by
+        rw [hu1zero, hu2zero] at hmom
+        simpa using hmom
+      have hp : p2 = p1 := hmom0.symm
+      have hCT : γ * R / (γ - 1) * T1 = γ * R / (γ - 1) * T2 := by
+        rw [hu1zero, hu2zero] at henth
+        simpa using henth
+      have hT12 : T1 = T2 := mul_left_cancel₀ hCne hCT
+      have hT : T2 = T1 := hT12.symm
+      have hp2' := hp2
+      rw [hT] at hp2'
+      have hRT1ne : R * T1 ≠ 0 := mul_ne_zero hRne hT1ne
+      have hρmul : ρ2 * (R * T1) = ρ1 * (R * T1) := by
+        linear_combination -hp2' + hp1 + hp
+      have hρ : ρ2 = ρ1 := mul_right_cancel₀ hRT1ne hρmul
+      left
+      exact ⟨hρ, hu21, hp, hT⟩
+    · have hmass' : ρ1 * u1 = ρ2 * u1 := by rw [←hu12] at hmass; exact hmass
+      have hρ12 : ρ1 = ρ2 := mul_right_cancel₀ hu1zero hmass'
+      have hρ : ρ2 = ρ1 := hρ12.symm
+      have hmom' : p1 + ρ1 * u1 ^ 2 = p2 + ρ1 * u1 ^ 2 := by
+        rw [hρ, ←hu12] at hmom
+        exact hmom
+      have hp : p2 = p1 := by linarith
+      have henth'2 : γ * R / (γ - 1) * T1 + u1 ^ 2 / 2
+          = γ * R / (γ - 1) * T2 + u1 ^ 2 / 2 := by
+        rw [←hu12] at henth
+        exact henth
+      have hCT : γ * R / (γ - 1) * T1 = γ * R / (γ - 1) * T2 := by
+        linear_combination henth'2
+      have hT12 : T1 = T2 := mul_left_cancel₀ hCne hCT
+      have hT : T2 = T1 := hT12.symm
+      left
+      exact ⟨hρ, hu21, hp, hT⟩
+  · have hγ1pos : 0 < γ + 1 := by linarith
+    have hγ1ne : γ + 1 ≠ 0 := ne_of_gt hγ1pos
+    have hγRT1pos : 0 < γ * R * T1 := mul_pos (mul_pos hγpos hR) hT1
+    have hγRT1ne : γ * R * T1 ≠ 0 := ne_of_gt hγRT1pos
+    have h2γRT1pos : 0 < 2 * γ * R * T1 :=
+      mul_pos (mul_pos (mul_pos (by norm_num) hγpos) hR) hT1
+    have hu1ne : u1 ≠ 0 := by
+      intro h
+      rw [h] at hG
+      linarith
+    have hu2ne : u2 ≠ 0 := by
+      intro h
+      rw [h] at hG
+      have h1 : 0 ≤ (γ - 1) * u1 ^ 2 :=
+        mul_nonneg (le_of_lt hγsubpos) (sq_nonneg u1)
+      linarith
+    have ha1sqpos : 0 < a1 ^ 2 := by
+      rw [ha1]
+      exact mul_pos (mul_pos hγpos hR) hT1
+    have ha1ne : a1 ≠ 0 := by
+      intro h
+      have hz : a1 ^ 2 = 0 := by simp [h]
+      rw [hz] at ha1sqpos
+      exact lt_irrefl 0 ha1sqpos
+    have hm : M1 ^ 2 = u1 ^ 2 / (γ * R * T1) := by
+      rw [hM1, div_pow, sq_abs, ha1]
+    have hm' : M1 ^ 2 * (γ * R * T1) = u1 ^ 2 := by
+      rw [hm, div_mul_cancel₀ _ hγRT1ne]
+    have hDpos : 0 < (γ - 1) * M1 ^ 2 + 2 := by
+      have h1 : 0 ≤ (γ - 1) * M1 ^ 2 :=
+        mul_nonneg (le_of_lt hγsubpos) (sq_nonneg M1)
+      linarith
+    have hDne : (γ - 1) * M1 ^ 2 + 2 ≠ 0 := ne_of_gt hDpos
+    have hρ1ne : ρ1 ≠ 0 := ne_of_gt hρ1
+    have hp1pos : 0 < p1 := by
+      rw [hp1]
+      exact mul_pos (mul_pos hρ1 hR) hT1
+    have hp1ne : p1 ≠ 0 := ne_of_gt hp1pos
+    have hp2pos : 0 < p2 := by
+      rw [hp2]
+      exact mul_pos (mul_pos hρ2 hR) hT2
+    have hG1mul : (ρ2 * ((γ - 1) * M1 ^ 2 + 2) - ρ1 * (γ + 1) * M1 ^ 2) * (γ * R * T1)
+        = 0 := by
+      linear_combination (ρ2 * (γ - 1) - ρ1 * (γ + 1)) * hm'
+        + (-ρ2) * hG + (-(γ + 1) * u1) * hmass
+    have hG1 : ρ2 * ((γ - 1) * M1 ^ 2 + 2) - ρ1 * (γ + 1) * M1 ^ 2 = 0 :=
+      (mul_eq_zero.mp hG1mul).resolve_right hγRT1ne
+    have hρ : ρ2 / ρ1 = shockDensityRatio γ (M1 ^ 2) := by
+      unfold shockDensityRatio
+      rw [div_eq_div_iff hρ1ne hDne]
+      linear_combination hG1
+    have hG2mul : (p2 * (γ + 1) - p1 * (2 * γ * M1 ^ 2 - (γ - 1))) * (γ * R * T1)
+        = 0 := by
+      linear_combination (-(γ * R * T1) * ρ1) * hG
+        + ((γ * R * T1) * (γ + 1) * u2) * hmass
+        + (2 * γ * (γ * R * T1 - u1 ^ 2)) * hp1
+        + (-(γ * R * T1) * (γ + 1)) * hmom + (-2 * γ * p1) * hm'
+    have hG2 : p2 * (γ + 1) - p1 * (2 * γ * M1 ^ 2 - (γ - 1)) = 0 :=
+      (mul_eq_zero.mp hG2mul).resolve_right hγRT1ne
+    have hp : p2 / p1 = shockPressureRatio γ (M1 ^ 2) := by
+      unfold shockPressureRatio
+      rw [div_eq_div_iff hp1ne hγ1ne]
+      linear_combination hG2
+    have hTmul : T2 * p1 * ρ2 - p2 * ρ1 * T1 = 0 := by
+      linear_combination T2 * ρ2 * hp1 - ρ1 * T1 * hp2
+    have hρdivne : ρ2 / ρ1 ≠ 0 := ne_of_gt (div_pos hρ2 hρ1)
+    have hPr : shockTemperatureRatio γ (M1 ^ 2) = (p2 / p1) / (ρ2 / ρ1) := by
+      unfold shockTemperatureRatio
+      rw [←hp, ←hρ]
+    have hT : T2 / T1 = shockTemperatureRatio γ (M1 ^ 2) := by
+      rw [hPr]
+      field_simp
+      linear_combination hTmul
+    have hPpos : 0 < shockPressureRatio γ (M1 ^ 2) := by
+      rw [←hp]
+      exact div_pos hp2pos hp1pos
+    have hQ : shockPressureRatio γ (M1 ^ 2) * (γ + 1)
+        = 2 * γ * M1 ^ 2 - (γ - 1) := by
+      unfold shockPressureRatio
+      exact div_mul_cancel₀ _ hγ1ne
+    have hnum : 0 < 2 * γ * M1 ^ 2 - (γ - 1) := by
+      have h2 := mul_pos hPpos hγ1pos
+      rw [hQ] at h2
+      exact h2
+    have hthresh : (γ - 1) / (2 * γ) < M1 ^ 2 := by
+      have h2γpos : 0 < 2 * γ := by linarith
+      rw [div_lt_iff₀ h2γpos]
+      linear_combination hnum
+    right
+    exact ⟨hρ, hp, hT, hthresh⟩
+
+/-- **The distinct branch is physical only above the pressure-positivity threshold.** Under the
+hypotheses of `isNormalShockJump_distinct` with `ρ1 > 0`, the distinct root has positive density,
+and it has positive pressure and temperature exactly when `M1 ^ 2 > (γ - 1) / (2 γ)`. -/
+lemma isNormalShockJump_distinct_pos_iff {γ R ρ1 u1 p1 T1 a1 M1 : ℝ} (hγ : 1 < γ) (hR : 0 < R)
+    (hρ1 : 0 < ρ1) (hT1 : 0 < T1) (hu1 : 0 < u1) (hp1 : p1 = ρ1 * R * T1)
+    (ha1 : a1 ^ 2 = γ * R * T1) (hM1 : M1 = |u1| / a1) :
+    0 < ρ1 * shockDensityRatio γ (M1 ^ 2) ∧
+      (0 < p1 * shockPressureRatio γ (M1 ^ 2) ∧ 0 < T1 * shockTemperatureRatio γ (M1 ^ 2) ↔
+        (γ - 1) / (2 * γ) < M1 ^ 2) := by
+  have hγpos : 0 < γ := by linarith
+  have hγ1pos : 0 < γ + 1 := by linarith
+  have hγ1ne : γ + 1 ≠ 0 := ne_of_gt hγ1pos
+  have hγne : γ ≠ 0 := ne_of_gt hγpos
+  have ha1sqpos : 0 < a1 ^ 2 := by
+    rw [ha1]
+    exact mul_pos (mul_pos hγpos hR) hT1
+  have ha1ne : a1 ≠ 0 := by
+    intro h
+    have hz : a1 ^ 2 = 0 := by simp [h]
+    rw [hz] at ha1sqpos
+    exact lt_irrefl 0 ha1sqpos
+  have hu1ne : u1 ≠ 0 := ne_of_gt hu1
+  have habspos : 0 < |u1| := abs_pos.mpr hu1ne
+  have habsne : |u1| ≠ 0 := ne_of_gt habspos
+  have hM1ne : M1 ≠ 0 := by
+    rw [hM1]
+    exact div_ne_zero habsne ha1ne
+  have hmpos : 0 < M1 ^ 2 := sq_pos_of_ne_zero hM1ne
+  have hDpos : 0 < (γ - 1) * M1 ^ 2 + 2 := by
+    have h1 : 0 ≤ (γ - 1) * M1 ^ 2 := by
+      apply mul_nonneg
+      · linarith
+      · exact sq_nonneg M1
+    linarith
+  have hrpos : 0 < shockDensityRatio γ (M1 ^ 2) := by
+    unfold shockDensityRatio
+    exact div_pos (mul_pos hγ1pos hmpos) hDpos
+  have hρrpos : 0 < ρ1 * shockDensityRatio γ (M1 ^ 2) := mul_pos hρ1 hrpos
+  have hp1pos : 0 < p1 := by
+    rw [hp1]
+    exact mul_pos (mul_pos hρ1 hR) hT1
+  have hPpos_iff_Qpos :
+      0 < shockPressureRatio γ (M1 ^ 2) ↔ 0 < 2 * γ * M1 ^ 2 - (γ - 1) := by
+    unfold shockPressureRatio
+    constructor
+    · intro h
+      have h2 := mul_pos h hγ1pos
+      rw [div_mul_cancel₀ _ hγ1ne] at h2
+      exact h2
+    · intro h
+      have hγ1invpos : 0 < (γ + 1)⁻¹ := inv_pos.mpr hγ1pos
+      have h3 := mul_pos h hγ1invpos
+      rwa [div_eq_mul_inv]
+  have hQpos_iff_thresh :
+      0 < 2 * γ * M1 ^ 2 - (γ - 1) ↔ (γ - 1) / (2 * γ) < M1 ^ 2 := by
+    have h2γpos : 0 < 2 * γ := by linarith
+    rw [div_lt_iff₀ h2γpos]
+    have heq : 2 * γ * M1 ^ 2 - (γ - 1) = M1 ^ 2 * (2 * γ) - (γ - 1) := by ring
+    rw [heq]
+    constructor <;> intro h <;> linarith
+  have hPiff : 0 < shockPressureRatio γ (M1 ^ 2) ↔ (γ - 1) / (2 * γ) < M1 ^ 2 :=
+    hPpos_iff_Qpos.trans hQpos_iff_thresh
+  refine ⟨hρrpos, ?_⟩
+  constructor
+  · intro h
+    obtain ⟨h1, _⟩ := h
+    have hPpos : 0 < shockPressureRatio γ (M1 ^ 2) :=
+      pos_of_mul_pos_right h1 (le_of_lt hp1pos)
+    exact hPiff.mp hPpos
+  · intro hthresh
+    have hPpos : 0 < shockPressureRatio γ (M1 ^ 2) := hPiff.mpr hthresh
+    have h1 : 0 < p1 * shockPressureRatio γ (M1 ^ 2) := mul_pos hp1pos hPpos
+    have hTPr : T1 * shockTemperatureRatio γ (M1 ^ 2)
+        = T1 * shockPressureRatio γ (M1 ^ 2) / shockDensityRatio γ (M1 ^ 2) := by
+      unfold shockTemperatureRatio
+      rw [mul_div_assoc]
+    have h2 : 0 < T1 * shockTemperatureRatio γ (M1 ^ 2) := by
+      rw [hTPr]
+      exact div_pos (mul_pos hT1 hPpos) hrpos
+    exact ⟨h1, h2⟩
+
+/-- **The roots coincide at `m = 1`.** For `γ > 1` and `m ≥ 0`, the density ratio and the
+pressure ratio of the distinct branch equal `1` exactly when `m = 1`, and at `m = 1` the
+temperature ratio is `1`: the distinct branch is then the trivial one. -/
+lemma shockRatio_eq_one_iff {γ m : ℝ} (hγ : 1 < γ) (hm : 0 ≤ m) :
+    (shockDensityRatio γ m = 1 ↔ m = 1) ∧ (shockPressureRatio γ m = 1 ↔ m = 1) ∧
+      (m = 1 → shockTemperatureRatio γ m = 1) := by
+  have hγpos : 0 < γ := by linarith
+  have hγ1pos : 0 < γ + 1 := by linarith
+  have hγ1ne : γ + 1 ≠ 0 := ne_of_gt hγ1pos
+  have hDpos : 0 < (γ - 1) * m + 2 := by
+    have h1 : 0 ≤ (γ - 1) * m := by
+      apply mul_nonneg
+      · linarith
+      · exact hm
+    linarith
+  have hDne : (γ - 1) * m + 2 ≠ 0 := ne_of_gt hDpos
+  have hDens : shockDensityRatio γ m = 1 ↔ m = 1 := by
+    constructor
+    · intro hr
+      unfold shockDensityRatio at hr
+      have hr2 : (γ + 1) * m = (γ - 1) * m + 2 := by
+        have h := congrArg (fun x => x * ((γ - 1) * m + 2)) hr
+        rw [div_mul_cancel₀ _ hDne, one_mul] at h
+        exact h
+      have h2 : 2 * m = 2 := by linear_combination hr2
+      linarith
+    · intro hm1
+      unfold shockDensityRatio
+      rw [hm1]
+      have hN : (γ + 1) * (1 : ℝ) = (γ - 1) * 1 + 2 := by ring
+      have hD1ne : (γ - 1) * (1 : ℝ) + 2 ≠ 0 := by
+        have : (γ - 1) * (1 : ℝ) + 2 = γ + 1 := by ring
+        rw [this]
+        exact hγ1ne
+      rw [hN, div_self hD1ne]
+  have hPress : shockPressureRatio γ m = 1 ↔ m = 1 := by
+    constructor
+    · intro hp
+      unfold shockPressureRatio at hp
+      have hp2 : 2 * γ * m - (γ - 1) = γ + 1 := by
+        have h := congrArg (fun x => x * (γ + 1)) hp
+        rw [div_mul_cancel₀ _ hγ1ne, one_mul] at h
+        exact h
+      have h2 : γ * m = γ * 1 := by linear_combination hp2 / 2
+      have hγne : γ ≠ 0 := ne_of_gt hγpos
+      exact mul_left_cancel₀ hγne h2
+    · intro hm1
+      unfold shockPressureRatio
+      rw [hm1]
+      have hN : 2 * γ * (1 : ℝ) - (γ - 1) = γ + 1 := by ring
+      rw [hN, div_self hγ1ne]
+  refine ⟨hDens, hPress, ?_⟩
+  intro hm1
+  have hr : shockDensityRatio γ m = 1 := hDens.mpr hm1
+  have hp : shockPressureRatio γ m = 1 := hPress.mpr hm1
+  unfold shockTemperatureRatio
+  rw [hr, hp, div_self (one_ne_zero)]
 
 end FluidDynamics.PerfectGasPorts
