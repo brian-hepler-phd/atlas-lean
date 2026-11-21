@@ -270,7 +270,9 @@ each page's link to its Markdown source; restoring those links is tracked in
 [#4993](https://github.com/facebookresearch/atlas-lean/issues/4993). Missing
 compiled modules or import collisions fail the workflow rather than silently
 publishing a partial graph. The ordinary repository CI remains the authority
-for the libraries' build and trust-policy checks.
+for the libraries' build and trust-policy checks; it also imports the same modules
+together (`scripts/check_declaration_collisions.sh`), so a pull request that adds a
+colliding declaration fails there.
 
 ## The Mathlib layer
 
@@ -311,6 +313,23 @@ taxonomy-shaped files, such as
 classification proposals, `join` reads their placements instead of those of
 `scripts/taxonomy.json`; `--strict` fails on a placement target that is neither
 a field of `scripts/taxonomy.json` nor one the given proposals add.
+
+## Mathlib pages
+
+The full site, kept as the `blueprint-site-full` artifact, adds one page per
+Mathlib module of the layer, grouped by topic, and its statement boxes list the
+Mathlib declarations their Lean statement and proof use; the site GitHub Pages
+publishes is unchanged. [`mathlib-pages.md`](mathlib-pages.md) describes the
+pages and how an article links to a Mathlib declaration: to its source line at
+the pinned revision, with its exact name as the link's title, which
+`python scripts/mathlib_link.py` prints. They are build outputs too, written
+from the built site and the layer:
+
+```sh
+python -m unittest scripts.test_build_mathlib_pages
+python scripts/build_mathlib_pages.py build site mathlib-graph site-full
+python scripts/build_mathlib_pages.py check site mathlib-graph site-full
+```
 
 ## Maintaining articles
 
@@ -388,14 +407,17 @@ per page in the search index.
 ## GitHub Actions and publication
 
 `Blueprint Pages` runs on `main` once a day at 03:17 UTC and on manual runs
-(**Actions → Blueprint Pages → Run workflow**), on every merge group, and on
+(**Actions → Blueprint Pages → Run workflow**), and on
 PRs that touch the wiki: `blueprint/`, the wiki scripts and
 their tests, `scripts/taxonomy.json`, `scripts/wiki-sync.json`, the site
 configuration (`mkdocs.yml`, `theme/`, `hooks/`), this document, the workflow,
 `.github/autoform-ref`, or the toolchain pins (`lean-toolchain`,
 `lake-manifest.json`, `lakefile.toml`). A Lean-only PR skips it, because
 `lean-facts` turns a renamed or deleted declaration into an unlinked page rather
-than a failure; merge groups and `main` still build the whole wiki. Do not make
+than a failure; `main` still builds the whole wiki once a day. Merge groups skip
+it too: it is not a required check, so a merge-group run could not stop a merge,
+and CI's required build already imports every v2 module together
+(`scripts/check_declaration_collisions.sh`). Do not make
 `build the wiki` a required status check: a workflow that `paths` skips never
 reports on that PR, so a required check would block every PR it skips. Making
 it requirable would need a first job that checks the changed paths and a
@@ -404,8 +426,9 @@ before deployment. Tests, Lean compilation, dependency extraction, rendering,
 and strict site checks run in one read-only job from one checkout. The job
 restores CI's `lake-build-*` cache and saves no cache of its own. The Mathlib
 layer is built afterwards in a second read-only job, `build the Mathlib layer`,
-which deployment does not wait for. The only write-capable job is the separate
-Pages deployment job; it runs no Lean or Python package code.
+and the Mathlib pages in a third, `build the Mathlib pages`; deployment waits
+for neither. The only write-capable job is the separate Pages deployment job;
+it runs no Lean or Python package code.
 
 Publication is disabled until a repository maintainer:
 
@@ -417,7 +440,9 @@ Publication is disabled until a repository maintainer:
    for the reason above.
 
 Only successful `main` builds publish. PRs, merge groups, and manual runs on
-other branches never upload a Pages artifact or request deployment. Successful
-`main` builds also keep the built site for a day as the `blueprint-site`
-artifact, so it can be downloaded or mirrored while Pages is off. No
-repository setting is changed merely by adding this workflow.
+other branches never upload a Pages artifact or request deployment. Every
+successful build keeps the built site for a day as the `blueprint-site`
+artifact, which `build the Mathlib pages` reads; `main`'s can be downloaded or
+mirrored. Successful `main` builds also keep the site with its Mathlib pages
+for three days as the `blueprint-site-full` artifact, for hosting outside
+GitHub Pages. No repository setting is changed merely by adding this workflow.
