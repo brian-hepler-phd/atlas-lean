@@ -14,6 +14,8 @@ public import Mathlib.Algebra.Polynomial.Eval.Defs
 public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 public import Mathlib.Combinatorics.Enumerative.Stirling
 public import Mathlib.NumberTheory.Bernoulli
+public import MathlibExt.Combinatorics.Enumerative.BinomialInversion
+public import MathlibExt.Combinatorics.Enumerative.CarlitzTypeQPolynomials
 
 namespace MetaMathlibExt
 
@@ -31,18 +33,6 @@ Source: Bakir Farhi, *q-Analogues of Sums of Consecutive Powers of Natural Numbe
 Carlitz q-Bernoulli Numbers and Polynomials*, INTEGERS 26 (2026), Article A85, Section 1. -/
 public noncomputable def qBracket (q x : ℝ) : ℝ :=
   (q ^ x - 1) / (q - 1)
-
-/-- **Carlitz-type sequences.** For real $q$, a sequence of functions
-$T_n : \mathbb{R} \to \mathbb{R}$, $n \ge 0$, is Carlitz-type with associated real sequence
-$(a_k)_{k \ge 0}$ if for every natural number $n$ and every real $x$,
-$T_n(x) = (q - 1)^{-n} \sum_{k=0}^{n} (-1)^{n-k} \binom{n}{k} a_k q^{kx}$.
-
-Source: Bakir Farhi, *q-Analogues of Sums of Consecutive Powers of Natural Numbers and Extended
-Carlitz q-Bernoulli Numbers and Polynomials*, INTEGERS 26 (2026), Article A85, Definition in
-Section 2.1. -/
-public def IsCarlitzTypeWith (q : ℝ) (T : ℕ → ℝ → ℝ) (a : ℕ → ℝ) : Prop :=
-  ∀ n x, T n x = ((q - 1) ^ n)⁻¹ *
-    ∑ k ∈ range (n + 1), (-1 : ℝ) ^ (n - k) * (n.choose k : ℝ) * a k * q ^ ((k : ℝ) * x)
 
 /-- **Carlitz $q$-polynomials $\eta_n$.** For real $q$, write $[y] = (q^y - 1)/(q - 1)$ and let
 $a_0 = 1$ and $a_k = k/[k]$ for $k \ge 1$. For natural $n$ and real $x$, Carlitz's $q$-polynomial
@@ -87,17 +77,6 @@ Carlitz q-Bernoulli Numbers and Polynomials*, INTEGERS 26 (2026), Article A85, S
 public theorem qBracket_one {q : ℝ} (hq : q ≠ 1) : qBracket q 1 = 1 := by
   rw [qBracket, Real.rpow_one, div_self (sub_ne_zero.mpr hq)]
 
-/-- **The zeroth term of a Carlitz-type sequence.** Let $q$ be a real number. If $(T_n)$ is a
-Carlitz-type $q$-polynomial sequence with associated real sequence $(a_k)$, then $T_0(x) = a_0$
-for every real $x$.
-
-Source: Bakir Farhi, *q-Analogues of Sums of Consecutive Powers of Natural Numbers and Extended
-Carlitz q-Bernoulli Numbers and Polynomials*, INTEGERS 26 (2026), Article A85, Definition in
-Section 2.1. -/
-public theorem IsCarlitzTypeWith.apply_zero {q : ℝ} {T : ℕ → ℝ → ℝ} {a : ℕ → ℝ}
-    (h : IsCarlitzTypeWith q T a) (x : ℝ) : T 0 x = a 0 := by
-  simp [h 0 x]
-
 /-- **The zeroth Carlitz $q$-polynomial.** For all real $q$ and $x$, Carlitz's $q$-polynomial
 $\eta_0(x)$ equals $1$.
 
@@ -138,17 +117,6 @@ public theorem_wanted isCarlitzType_iff_sum_choose (q : ℝ) (hq0 : 0 < q) (hq1 
     (∃ a, IsCarlitzTypeWith q T a) ↔
       ∀ n x, T n x = ∑ k ∈ range (n + 1),
         (n.choose k : ℝ) * T k 0 * q ^ ((k : ℝ) * x) * qBracket q x ^ (n - k)
-
-/-- **Binomial inversion.** For real sequences $(u_n)$ and $(v_n)$, the identities
-$u_n = \sum_{k=0}^{n} \binom{n}{k} v_k$ hold for all natural numbers $n$ if and only if the
-identities $v_n = \sum_{k=0}^{n} (-1)^{n-k} \binom{n}{k} u_k$ hold for all natural numbers $n$.
-
-Source: Bakir Farhi, *q-Analogues of Sums of Consecutive Powers of Natural Numbers and Extended
-Carlitz q-Bernoulli Numbers and Polynomials*, INTEGERS 26 (2026), Article A85, Lemma 2.2
-(`integers-2026-A85-lem-2-2`). -/
-public theorem_wanted binomial_inversion_iff (u v : ℕ → ℝ) :
-    (∀ n, u n = ∑ k ∈ range (n + 1), (n.choose k : ℝ) * v k) ↔
-      ∀ n, v n = ∑ k ∈ range (n + 1), (-1 : ℝ) ^ (n - k) * (n.choose k : ℝ) * u k
 
 /-- **Sums of $q^{rk} [k]^n$ via Carlitz-type sequences.** Let $q > 0$ with $q \ne 1$, let
 $[x] = (q^x - 1)/(q - 1)$, and let $r \ge 1$ be a natural number. Let $S_m(x)$
@@ -206,31 +174,6 @@ public theorem_wanted carlitzType_symbolic_recurrence (q : ℝ) (hq0 : 0 < q) (h
     (ha : ∀ k : ℕ, qBracket q ((k + r : ℕ) : ℝ) * a k = P.eval (k : ℝ))
     (T : ℕ → ℝ → ℝ) (hT : IsCarlitzTypeWith q T a) (n : ℕ) (hn : P.natDegree < n) :
     q ^ r * ∑ j ∈ range (n + 1), (n.choose j : ℝ) * q ^ j * T j 0 = T n 0
-
-/-- **Closure properties of Carlitz-type sequences.** Let $q > 0$ with $q \ne 1$ be real, and let
-$(T_n)$ be a Carlitz-type sequence of functions $\mathbb{R} \to \mathbb{R}$ with associated real
-sequence $(a_k)$. Then:
-(i) $n q^x T_{n-1}(x)$ is Carlitz-type with associated sequence $(q - 1) k a_{k-1}$;
-(ii) if $a_0 = 0$, then $q^{-x} T_{n+1}(x)/(n + 1)$ is Carlitz-type with associated sequence
-$a_{k+1}/((q - 1)(k + 1))$;
-(iii) $q^{-x} (T_n(x) + (q - 1) T_{n+1}(x))$ is Carlitz-type with associated sequence $a_{k+1}$;
-(iv) $n (T_{n-1}(x) + (q - 1) T_n(x))$ is Carlitz-type with associated sequence $(q - 1) k a_k$.
-At $n = 0$ the functions in (i) and (iv) are $0$, and at $k = 0$ the associated sequence in (i)
-is $0$.
-
-Source: Bakir Farhi, *q-Analogues of Sums of Consecutive Powers of Natural Numbers and Extended
-Carlitz q-Bernoulli Numbers and Polynomials*, INTEGERS 26 (2026), Article A85, Proposition 2.6
-(`integers-2026-A85-prop-2-6`). -/
-public theorem_wanted isCarlitzTypeWith_closure (q : ℝ) (hq0 : 0 < q) (hq1 : q ≠ 1)
-    (T : ℕ → ℝ → ℝ) (a : ℕ → ℝ) (hT : IsCarlitzTypeWith q T a) :
-    IsCarlitzTypeWith q (fun n x => q ^ x * n * T (n - 1) x)
-        (fun k => (q - 1) * k * a (k - 1)) ∧
-      (a 0 = 0 → IsCarlitzTypeWith q (fun n x => q ^ (-x) * T (n + 1) x / (n + 1))
-        (fun k => a (k + 1) / ((q - 1) * (k + 1)))) ∧
-      IsCarlitzTypeWith q (fun n x => q ^ (-x) * (T n x + (q - 1) * T (n + 1) x))
-        (fun k => a (k + 1)) ∧
-      IsCarlitzTypeWith q (fun n x => n * (T (n - 1) x + (q - 1) * T n x))
-        (fun k => (q - 1) * k * a k)
 
 /-- **Sums of $q^k [k]^{n-1}$ via Carlitz's $q$-polynomials $\eta_n$.** Let $q > 0$ with $q \ne 1$,
 let $[x] = (q^x - 1)/(q - 1)$, and let $\eta_n(x)$ be Carlitz's $q$-polynomials, with
