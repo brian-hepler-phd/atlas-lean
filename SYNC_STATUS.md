@@ -3,9 +3,9 @@
 This fork's `main` mirrors [facebookresearch/atlas-lean]
 (https://github.com/facebookresearch/atlas-lean) and is refreshed hourly.
 
-- Last sync that brought in a change: 2026-11-25 22:28 UTC
-- Upstream main: `8985e8b684`
-- Commits behind at sync time: 311
+- Last sync that brought in a change: 2026-11-26 04:59 UTC
+- Upstream main: `3384dee598`
+- Commits behind at sync time: 856
 
 This file is updated only when upstream actually moves, so a slightly
 old timestamp is normal. To check the sync is ALIVE, see the
